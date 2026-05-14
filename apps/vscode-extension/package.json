@@ -3,6 +3,7 @@
   "displayName": "Chronam",
   "description": "Modern VHDL development environment with simulation, waveform viewing, and interactive debugging",
   "version": "0.1.0",
+  "icon": "assets/logo.png",
   "license": "MIT",
   "publisher": "chronam",
   "engines": {
