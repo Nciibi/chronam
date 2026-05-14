@@ -1,0 +1,337 @@
+// ============================================================================
+// WaveForge — VCD Parser
+// ============================================================================
+// Parses IEEE 1364 Value Change Dump (VCD) files into WaveformData.
+// Handles header sections (date, version, timescale, variable definitions)
+// and value change sections (timestamps, scalar/vector changes).
+//
+// VCD format reference: IEEE Std 1364-2001, Section 18
+// ============================================================================
+
+import type {
+  WaveformData,
+  WaveformSignal,
+  SignalTransition,
+  SignalValue,
+  TimescaleSpec,
+  TimeUnit,
+  WaveformMetadata,
+  ScalarValue,
+} from '@waveforge/shared-types';
+
+// ─── Internal types for parsing ─────────────────────────────────────────────
+
+interface VarDefinition {
+  type: string;       // wire, reg, integer, etc.
+  width: number;
+  idCode: string;     // VCD short identifier (e.g., "!", "#", "a1")
+  name: string;
+  scopePath: string[];
+}
+
+interface ParseState {
+  metadata: WaveformMetadata;
+  timescale: TimescaleSpec;
+  variables: Map<string, VarDefinition>;  // idCode → VarDefinition
+  scopeStack: string[];
+  currentTime: number;
+  endTime: number;
+  transitions: Map<string, SignalTransition[]>;  // idCode → transitions
+}
+
+// ─── Public API ─────────────────────────────────────────────────────────────
+
+/**
+ * Parse a VCD file content string into structured WaveformData.
+ * This is a single-pass parser optimized for typical GHDL VCD output.
+ *
+ * @param content - Raw VCD file content
+ * @returns Parsed waveform data ready for rendering
+ * @throws Error if the VCD is malformed in critical ways
+ */
+export function parseVCD(content: string): WaveformData {
+  const state: ParseState = {
+    metadata: {},
+    timescale: { value: 1, unit: 'ns' },
+    variables: new Map(),
+    scopeStack: [],
+    currentTime: 0,
+    endTime: 0,
+    transitions: new Map(),
+  };
+
+  const lines = content.split('\n');
+  let i = 0;
+
+  // Parse header and value changes
+  while (i < lines.length) {
+    const line = lines[i].trim();
+
+    if (line.length === 0) {
+      i++;
+      continue;
+    }
+
+    if (line.startsWith('$')) {
+      i = parseKeywordSection(lines, i, state);
+    } else if (line.startsWith('#')) {
+      // Timestamp
+      const time = parseInt(line.substring(1), 10);
+      if (!isNaN(time)) {
+        state.currentTime = time;
+        if (time > state.endTime) {
+          state.endTime = time;
+        }
+      }
+      i++;
+    } else {
+      // Value change
+      parseValueChange(line, state);
+      i++;
+    }
+  }
+
+  return buildWaveformData(state);
+}
+
+// ─── Section Parsers ────────────────────────────────────────────────────────
+
+function parseKeywordSection(lines: string[], startIdx: number, state: ParseState): number {
+  const line = lines[startIdx].trim();
+
+  if (line.startsWith('$date')) {
+    return parseSectionText(lines, startIdx, '$date', (text) => {
+      state.metadata.date = text.trim();
+    });
+  }
+
+  if (line.startsWith('$version')) {
+    return parseSectionText(lines, startIdx, '$version', (text) => {
+      state.metadata.version = text.trim();
+    });
+  }
+
+  if (line.startsWith('$comment')) {
+    return parseSectionText(lines, startIdx, '$comment', (text) => {
+      state.metadata.comment = text.trim();
+    });
+  }
+
+  if (line.startsWith('$timescale')) {
+    return parseSectionText(lines, startIdx, '$timescale', (text) => {
+      state.timescale = parseTimescale(text.trim());
+    });
+  }
+
+  if (line.startsWith('$scope')) {
+    const match = line.match(/\$scope\s+(\w+)\s+(\S+)\s+\$end/);
+    if (match) {
+      state.scopeStack.push(match[2]);
+    }
+    return startIdx + 1;
+  }
+
+  if (line.startsWith('$upscope')) {
+    state.scopeStack.pop();
+    return startIdx + 1;
+  }
+
+  if (line.startsWith('$var')) {
+    parseVarDeclaration(line, state);
+    return startIdx + 1;
+  }
+
+  if (line.startsWith('$enddefinitions')) {
+    return startIdx + 1;
+  }
+
+  if (line.startsWith('$dumpvars') || line.startsWith('$dumpall') ||
+      line.startsWith('$dumpoff') || line.startsWith('$dumpon')) {
+    // Read until $end
+    let idx = startIdx + 1;
+    while (idx < lines.length) {
+      const l = lines[idx].trim();
+      if (l === '$end') {
+        return idx + 1;
+      }
+      // Parse value changes within dump sections
+      if (l.length > 0 && !l.startsWith('$')) {
+        parseValueChange(l, state);
+      }
+      idx++;
+    }
+    return idx;
+  }
+
+  if (line === '$end') {
+    return startIdx + 1;
+  }
+
+  return startIdx + 1;
+}
+
+/**
+ * Parse a multi-line section like $date ... $end
+ */
+function parseSectionText(
+  lines: string[],
+  startIdx: number,
+  _keyword: string,
+  callback: (text: string) => void
+): number {
+  const firstLine = lines[startIdx].trim();
+
+  // Check if $keyword and $end are on the same line
+  const endIdx = firstLine.indexOf('$end');
+  if (endIdx !== -1) {
+    const keywordEnd = firstLine.indexOf(' ');
+    if (keywordEnd !== -1) {
+      callback(firstLine.substring(keywordEnd + 1, endIdx));
+    }
+    return startIdx + 1;
+  }
+
+  // Multi-line: collect text until $end
+  let text = '';
+  const keywordEnd = firstLine.indexOf(' ');
+  if (keywordEnd !== -1) {
+    text = firstLine.substring(keywordEnd + 1);
+  }
+
+  let idx = startIdx + 1;
+  while (idx < lines.length) {
+    const line = lines[idx].trim();
+    if (line === '$end' || line.includes('$end')) {
+      callback(text.trim());
+      return idx + 1;
+    }
+    text += ' ' + line;
+    idx++;
+  }
+
+  callback(text.trim());
+  return idx;
+}
+
+/**
+ * Parse a $var declaration line.
+ * Format: $var <type> <width> <id_code> <name> $end
+ */
+function parseVarDeclaration(line: string, state: ParseState): void {
+  // $var wire 1 ! clk $end
+  // $var reg 4 " q [3:0] $end
+  const match = line.match(/\$var\s+(\w+)\s+(\d+)\s+(\S+)\s+(.+?)\s+\$end/);
+  if (!match) return;
+
+  const [, type, widthStr, idCode, nameRaw] = match;
+  const width = parseInt(widthStr, 10);
+  // Strip array notation from name (e.g., "q [3:0]" → "q")
+  const name = nameRaw.replace(/\s*\[.*\]$/, '').trim();
+
+  const varDef: VarDefinition = {
+    type,
+    width,
+    idCode,
+    name,
+    scopePath: [...state.scopeStack],
+  };
+
+  state.variables.set(idCode, varDef);
+  state.transitions.set(idCode, []);
+}
+
+/**
+ * Parse a value change line.
+ * Scalar: <value><id_code>  (e.g., "1!" or "0#")
+ * Vector: b<binary> <id_code>  (e.g., "b0010 $")
+ */
+function parseValueChange(line: string, state: ParseState): void {
+  if (line.length === 0) return;
+
+  const firstChar = line[0];
+
+  // Scalar value change
+  if ('01xzXZuUwWhHlL-'.includes(firstChar) && !line.startsWith('b') && !line.startsWith('B')) {
+    const value = firstChar.toLowerCase() as ScalarValue;
+    const idCode = line.substring(1).trim();
+
+    if (state.variables.has(idCode)) {
+      const signalValue: SignalValue = { kind: 'scalar', value };
+      addTransition(state, idCode, signalValue);
+    }
+    return;
+  }
+
+  // Vector value change
+  if (firstChar === 'b' || firstChar === 'B') {
+    const parts = line.substring(1).split(/\s+/);
+    if (parts.length >= 2) {
+      const bits = parts[0];
+      const idCode = parts[1];
+      const varDef = state.variables.get(idCode);
+
+      if (varDef) {
+        // Pad or trim to correct width
+        const paddedBits = bits.padStart(varDef.width, '0');
+        const signalValue: SignalValue = {
+          kind: 'vector',
+          value: paddedBits,
+          width: varDef.width,
+        };
+        addTransition(state, idCode, signalValue);
+      }
+    }
+    return;
+  }
+
+  // Real value change (future support)
+  if (firstChar === 'r' || firstChar === 'R') {
+    // Skip for now — real signals not yet supported in renderer
+    return;
+  }
+}
+
+function addTransition(state: ParseState, idCode: string, value: SignalValue): void {
+  const transitions = state.transitions.get(idCode);
+  if (transitions) {
+    transitions.push({ time: state.currentTime, value });
+  }
+}
+
+// ─── Timescale Parser ───────────────────────────────────────────────────────
+
+function parseTimescale(text: string): TimescaleSpec {
+  const match = text.match(/(\d+)\s*(fs|ps|ns|us|ms|s)/i);
+  if (match) {
+    return {
+      value: parseInt(match[1], 10),
+      unit: match[2].toLowerCase() as TimeUnit,
+    };
+  }
+  return { value: 1, unit: 'ns' };
+}
+
+// ─── Build Output ───────────────────────────────────────────────────────────
+
+function buildWaveformData(state: ParseState): WaveformData {
+  const signals: WaveformSignal[] = [];
+
+  for (const [idCode, varDef] of state.variables) {
+    const transitions = state.transitions.get(idCode) ?? [];
+
+    signals.push({
+      id: idCode,
+      name: varDef.name,
+      hierarchyPath: [...varDef.scopePath, varDef.name],
+      width: varDef.width,
+      transitions,
+    });
+  }
+
+  return {
+    timescale: state.timescale,
+    endTime: state.endTime,
+    signals,
+    metadata: state.metadata,
+  };
+}

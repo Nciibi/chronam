@@ -1,0 +1,31 @@
+{
+  "name": "waveforge",
+  "private": true,
+  "description": "Modern VHDL development environment for VS Code",
+  "version": "0.1.0",
+  "license": "MIT",
+  "author": "WaveForge Contributors",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/waveforge/waveforge"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "clean": "turbo run clean",
+    "typecheck": "turbo run typecheck"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0",
+    "prettier": "^3.3.0",
+    "eslint": "^9.0.0"
+  }
+}
