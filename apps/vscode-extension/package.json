@@ -1,0 +1,171 @@
+{
+  "name": "waveforge",
+  "displayName": "WaveForge",
+  "description": "Modern VHDL development environment with simulation, waveform viewing, and interactive debugging",
+  "version": "0.1.0",
+  "license": "MIT",
+  "publisher": "waveforge",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Debuggers",
+    "Visualization",
+    "Other"
+  ],
+  "keywords": [
+    "VHDL",
+    "HDL",
+    "FPGA",
+    "GHDL",
+    "waveform",
+    "simulation",
+    "testbench",
+    "digital design",
+    "hardware"
+  ],
+  "activationEvents": [
+    "onLanguage:vhdl",
+    "workspaceContains:**/*.vhd",
+    "workspaceContains:**/*.vhdl"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "waveforge.runSimulation",
+        "title": "Run Simulation",
+        "icon": "$(play)",
+        "category": "WaveForge"
+      },
+      {
+        "command": "waveforge.generateTestbench",
+        "title": "Generate Testbench",
+        "icon": "$(file-code)",
+        "category": "WaveForge"
+      },
+      {
+        "command": "waveforge.openWaveViewer",
+        "title": "Open Wave Viewer",
+        "icon": "$(graph-line)",
+        "category": "WaveForge"
+      },
+      {
+        "command": "waveforge.detectSimulator",
+        "title": "Detect Simulator",
+        "icon": "$(search)",
+        "category": "WaveForge"
+      },
+      {
+        "command": "waveforge.stopSimulation",
+        "title": "Stop Simulation",
+        "icon": "$(debug-stop)",
+        "category": "WaveForge"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "waveforge.runSimulation",
+          "when": "resourceLangId == vhdl",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "waveforge.runSimulation",
+          "when": "resourceLangId == vhdl",
+          "group": "waveforge@1"
+        },
+        {
+          "command": "waveforge.generateTestbench",
+          "when": "resourceLangId == vhdl",
+          "group": "waveforge@2"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "WaveForge",
+      "properties": {
+        "waveforge.simulator.preferred": {
+          "type": "string",
+          "default": "ghdl",
+          "enum": ["ghdl"],
+          "description": "Preferred VHDL simulator"
+        },
+        "waveforge.simulator.ghdlPath": {
+          "type": "string",
+          "default": "",
+          "description": "Custom path to GHDL binary (leave empty to use PATH)"
+        },
+        "waveforge.simulator.vhdlVersion": {
+          "type": "string",
+          "default": "2008",
+          "enum": ["1987", "1993", "2002", "2008"],
+          "description": "Default VHDL standard version"
+        },
+        "waveforge.simulator.defaultDurationNs": {
+          "type": "number",
+          "default": 1000,
+          "description": "Default simulation duration in nanoseconds"
+        },
+        "waveforge.waveViewer.signalHeight": {
+          "type": "number",
+          "default": 30,
+          "minimum": 20,
+          "maximum": 60,
+          "description": "Signal row height in pixels"
+        },
+        "waveforge.waveViewer.defaultFormat": {
+          "type": "string",
+          "default": "hex",
+          "enum": ["hex", "binary", "decimal", "unsigned", "signed"],
+          "description": "Default display format for vector signals"
+        },
+        "waveforge.testbench.defaultClockPeriodNs": {
+          "type": "number",
+          "default": 10,
+          "description": "Default clock period in nanoseconds"
+        },
+        "waveforge.testbench.autoDetect": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically detect clock and reset signals"
+        },
+        "waveforge.general.autoOpenWaveViewer": {
+          "type": "boolean",
+          "default": true,
+          "description": "Auto-open wave viewer after successful simulation"
+        }
+      }
+    },
+    "languages": [
+      {
+        "id": "vhdl",
+        "aliases": ["VHDL", "vhdl"],
+        "extensions": [".vhd", ".vhdl"],
+        "configuration": "./language-configuration.json"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap",
+    "dev": "pnpm build --watch",
+    "package": "vsce package --no-dependencies",
+    "clean": "rm -rf dist out",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@waveforge/shared-types": "workspace:*",
+    "@waveforge/vhdl-parser": "workspace:*",
+    "@waveforge/vcd-parser": "workspace:*",
+    "@waveforge/testbench-generator": "workspace:*",
+    "@waveforge/simulation-engine": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.21.0",
+    "typescript": "^5.5.0"
+  }
+}

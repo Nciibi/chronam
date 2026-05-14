@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "module": "CommonJS",
+    "moduleResolution": "node"
+  },
+  "include": ["src/**/*"],
+  "references": [
+    { "path": "../../packages/shared-types" },
+    { "path": "../../packages/vhdl-parser" },
+    { "path": "../../packages/vcd-parser" },
+    { "path": "../../packages/testbench-generator" },
+    { "path": "../../packages/simulation-engine" }
+  ]
+}
