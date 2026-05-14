@@ -114,12 +114,12 @@ export function runProcess(
       child.on('exit', () => signal.removeEventListener('abort', onAbort));
     }
 
-    child.on('error', (err) => {
+    child.on('error', (err: Error) => {
       clearTimeout(timer);
       reject(new Error(`Process "${command}" error: ${err.message}`));
     });
 
-    child.on('exit', (code) => {
+    child.on('exit', (code: number | null) => {
       clearTimeout(timer);
       resolve({
         exitCode: code ?? 1,

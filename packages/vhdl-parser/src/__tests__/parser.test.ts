@@ -3,7 +3,7 @@
 // ============================================================================
 
 import { describe, it, expect } from 'vitest';
-import { parseVHDLFile, parseVHDLType } from '../src/parser';
+import { parseVHDLFile, parseVHDLType } from '../parser.js';
 
 const COUNTER_VHDL = `
 library ieee;

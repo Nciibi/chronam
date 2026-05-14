@@ -3,7 +3,7 @@
 // ============================================================================
 
 import { describe, it, expect } from 'vitest';
-import { generateTestbench } from '../src/generator';
+import { generateTestbench } from '../generator.js';
 import type { Entity, SimulationConfig } from '@waveforge/shared-types';
 import { createDefaultSimConfig } from '@waveforge/shared-types';
 

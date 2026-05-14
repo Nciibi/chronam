@@ -18,7 +18,6 @@ import type {
   WaveformData,
   WaveformSignal,
   SignalTransition,
-  SignalValue,
   CursorState,
   SignalDisplayConfig,
   SignalDisplayFormat,
@@ -121,7 +120,7 @@ export class WaveformRenderer {
   render(): void {
     if (!this.data || !this.viewport) return;
 
-    const { ctx, config, colors } = this;
+    const { ctx, colors } = this;
     const width = ctx.canvas.width / this.dpr;
     const height = ctx.canvas.height / this.dpr;
 
@@ -320,7 +319,7 @@ export class WaveformRenderer {
       if (signal.width === 1) {
         this.renderScalarSignal(signal, y, signalColor, timeStart, timeEnd, width);
       } else {
-        this.renderVectorSignal(signal, y, signalColor, timeStart, timeEnd, width, i);
+        this.renderVectorSignal(signal, y, signalColor, timeStart, timeEnd, width);
       }
     }
 
@@ -362,12 +361,12 @@ export class WaveformRenderer {
       const val = t.value.value;
 
       // Choose color
-      if (val === 'x' || val === 'X') {
+      if (val === 'x') {
         ctx.strokeStyle = colors.signalX;
         ctx.fillStyle = colors.signalX + '20';
-      } else if (val === 'z' || val === 'Z') {
+      } else if (val === 'z') {
         ctx.strokeStyle = colors.signalZ;
-      } else if (val === 'u' || val === 'U') {
+      } else if (val === 'u') {
         ctx.strokeStyle = colors.signalU;
         ctx.fillStyle = colors.signalU + '20';
       } else {
@@ -375,7 +374,7 @@ export class WaveformRenderer {
       }
 
       // Draw signal level
-      const levelY = val === '1' || val === 'h' || val === 'H' ? highY : lowY;
+      const levelY = val === '1' || val === 'h' ? highY : lowY;
 
       ctx.beginPath();
 
@@ -383,7 +382,7 @@ export class WaveformRenderer {
       if (ti > 0) {
         const prevT = transitions[ti - 1];
         if (prevT.value.kind === 'scalar') {
-          const prevLevel = prevT.value.value === '1' || prevT.value.value === 'h' || prevT.value.value === 'H' ? highY : lowY;
+          const prevLevel = prevT.value.value === '1' || prevT.value.value === 'h' ? highY : lowY;
           if (prevLevel !== levelY) {
             ctx.moveTo(x, prevLevel);
             ctx.lineTo(x, levelY);
@@ -401,7 +400,7 @@ export class WaveformRenderer {
       }
 
       // Dashed line for Z
-      if (val === 'z' || val === 'Z') {
+      if (val === 'z') {
         ctx.setLineDash([3, 3]);
         ctx.beginPath();
         ctx.moveTo(x, mid);
@@ -418,15 +417,13 @@ export class WaveformRenderer {
     color: string,
     timeStart: number,
     timeEnd: number,
-    canvasWidth: number,
-    signalIndex: number
+    canvasWidth: number
   ): void {
     const { ctx, config, colors, viewport } = this;
     if (!viewport) return;
 
     const top = y + config.signalPadding;
     const bottom = y + config.signalHeight - config.signalPadding;
-    const height = bottom - top;
     const mid = (top + bottom) / 2;
 
     const transitions = getVisibleTransitions(signal.transitions, timeStart, timeEnd);

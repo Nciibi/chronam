@@ -12,9 +12,8 @@ import type {
   VHDLType,
   ClockConfig,
   SimulationConfig,
-  StimulusConfig,
 } from '@waveforge/shared-types';
-import { getDefaultValue, getTypeWidth } from '@waveforge/shared-types';
+import { getDefaultValue } from '@waveforge/shared-types';
 
 /** Options controlling testbench generation */
 export interface TestbenchOptions {

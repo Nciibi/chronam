@@ -140,10 +140,9 @@ export function getDefaultValue(type: VHDLType): string {
       return 'false';
     case 'std_logic_vector':
     case 'unsigned':
-    case 'signed': {
-      const width = Math.abs(type.range.high - type.range.low) + 1;
+    case 'signed':
       return `(others => '0')`;
-    }
+
     case 'bit_vector': {
       return `(others => '0')`;
     }

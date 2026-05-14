@@ -11,10 +11,8 @@ import * as fs from 'fs/promises';
 import type {
   SimulationConfig,
   SimulationResult,
-  SimulationStatus,
   SimulatorId,
   SimulatorInfo,
-  Entity,
 } from '@waveforge/shared-types';
 import type { SimulatorAdapter, SimulationProgressCallback } from './adapter.js';
 import { GHDLAdapter } from './ghdl.js';

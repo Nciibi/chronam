@@ -3,7 +3,7 @@
 // ============================================================================
 
 import { describe, it, expect } from 'vitest';
-import { parseVCD } from '../src/parser';
+import { parseVCD } from '../parser.js';
 
 const SAMPLE_VCD = `$date
    Mon Jan 01 00:00:00 2024
