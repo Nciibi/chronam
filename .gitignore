@@ -1,0 +1,10 @@
+node_modules/
+dist/
+out/
+*.vsix
+.waveforge/
+*.vcd
+*.ghw
+*.cf
+*.o
+.turbo/
