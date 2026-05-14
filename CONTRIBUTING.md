@@ -1,6 +1,6 @@
-# Contributing to WaveForge
+# Contributing to Chronam
 
-Thank you for considering contributing to WaveForge! We welcome contributions of all kinds.
+Thank you for considering contributing to Chronam! We welcome contributions of all kinds.
 
 ## Development Setup
 
@@ -11,7 +11,7 @@ Thank you for considering contributing to WaveForge! We welcome contributions of
 
 ## Architecture
 
-WaveForge is a monorepo with the following packages:
+Chronam is a monorepo with the following packages:
 
 - `shared-types` — TypeScript interfaces shared across all packages
 - `vhdl-parser` — Parses VHDL source to extract entities, ports, architectures
@@ -42,4 +42,4 @@ Please include:
 - OS and VS Code version
 - GHDL version (`ghdl --version`)
 - The VHDL file causing the issue
-- Error messages from the WaveForge output channel
+- Error messages from the Chronam output channel

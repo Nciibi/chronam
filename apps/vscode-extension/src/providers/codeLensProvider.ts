@@ -1,5 +1,5 @@
 // ============================================================================
-// WaveForge — CodeLens Provider
+// Chronam — CodeLens Provider
 // ============================================================================
 // Adds "▶ Run Simulation" and "📝 Generate Testbench" inline actions
 // above each entity declaration in VHDL files.
@@ -30,7 +30,7 @@ export class VHDLCodeLensProvider implements vscode.CodeLensProvider {
       codeLenses.push(
         new vscode.CodeLens(range, {
           title: '▶ Run Simulation',
-          command: 'waveforge.runSimulation',
+          command: 'chronam.runSimulation',
           tooltip: `Simulate entity '${match[1]}'`,
         })
       );
@@ -39,7 +39,7 @@ export class VHDLCodeLensProvider implements vscode.CodeLensProvider {
       codeLenses.push(
         new vscode.CodeLens(range, {
           title: '📝 Generate Testbench',
-          command: 'waveforge.generateTestbench',
+          command: 'chronam.generateTestbench',
           tooltip: `Generate testbench for entity '${match[1]}'`,
         })
       );

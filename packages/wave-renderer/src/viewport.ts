@@ -1,11 +1,11 @@
 // ============================================================================
-// WaveForge — Viewport Manager
+// Chronam — Viewport Manager
 // ============================================================================
 // Manages the visible region of the waveform (zoom, pan, scroll).
 // Computes pixel ↔ time coordinate mappings for the renderer.
 // ============================================================================
 
-import type { ViewportState, WaveformData } from '@waveforge/shared-types';
+import type { ViewportState, WaveformData } from '@chronam/shared-types';
 
 export interface ViewportBounds {
   minTime: number;

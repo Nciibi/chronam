@@ -1,10 +1,10 @@
 {
-  "name": "waveforge",
-  "displayName": "WaveForge",
+  "name": "chronam",
+  "displayName": "Chronam",
   "description": "Modern VHDL development environment with simulation, waveform viewing, and interactive debugging",
   "version": "0.1.0",
   "license": "MIT",
-  "publisher": "waveforge",
+  "publisher": "chronam",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -34,106 +34,106 @@
   "contributes": {
     "commands": [
       {
-        "command": "waveforge.runSimulation",
+        "command": "chronam.runSimulation",
         "title": "Run Simulation",
         "icon": "$(play)",
-        "category": "WaveForge"
+        "category": "Chronam"
       },
       {
-        "command": "waveforge.generateTestbench",
+        "command": "chronam.generateTestbench",
         "title": "Generate Testbench",
         "icon": "$(file-code)",
-        "category": "WaveForge"
+        "category": "Chronam"
       },
       {
-        "command": "waveforge.openWaveViewer",
+        "command": "chronam.openWaveViewer",
         "title": "Open Wave Viewer",
         "icon": "$(graph-line)",
-        "category": "WaveForge"
+        "category": "Chronam"
       },
       {
-        "command": "waveforge.detectSimulator",
+        "command": "chronam.detectSimulator",
         "title": "Detect Simulator",
         "icon": "$(search)",
-        "category": "WaveForge"
+        "category": "Chronam"
       },
       {
-        "command": "waveforge.stopSimulation",
+        "command": "chronam.stopSimulation",
         "title": "Stop Simulation",
         "icon": "$(debug-stop)",
-        "category": "WaveForge"
+        "category": "Chronam"
       }
     ],
     "menus": {
       "editor/title": [
         {
-          "command": "waveforge.runSimulation",
+          "command": "chronam.runSimulation",
           "when": "resourceLangId == vhdl",
           "group": "navigation"
         }
       ],
       "editor/context": [
         {
-          "command": "waveforge.runSimulation",
+          "command": "chronam.runSimulation",
           "when": "resourceLangId == vhdl",
-          "group": "waveforge@1"
+          "group": "chronam@1"
         },
         {
-          "command": "waveforge.generateTestbench",
+          "command": "chronam.generateTestbench",
           "when": "resourceLangId == vhdl",
-          "group": "waveforge@2"
+          "group": "chronam@2"
         }
       ]
     },
     "configuration": {
-      "title": "WaveForge",
+      "title": "Chronam",
       "properties": {
-        "waveforge.simulator.preferred": {
+        "chronam.simulator.preferred": {
           "type": "string",
           "default": "ghdl",
           "enum": ["ghdl"],
           "description": "Preferred VHDL simulator"
         },
-        "waveforge.simulator.ghdlPath": {
+        "chronam.simulator.ghdlPath": {
           "type": "string",
           "default": "",
           "description": "Custom path to GHDL binary (leave empty to use PATH)"
         },
-        "waveforge.simulator.vhdlVersion": {
+        "chronam.simulator.vhdlVersion": {
           "type": "string",
           "default": "2008",
           "enum": ["1987", "1993", "2002", "2008"],
           "description": "Default VHDL standard version"
         },
-        "waveforge.simulator.defaultDurationNs": {
+        "chronam.simulator.defaultDurationNs": {
           "type": "number",
           "default": 1000,
           "description": "Default simulation duration in nanoseconds"
         },
-        "waveforge.waveViewer.signalHeight": {
+        "chronam.waveViewer.signalHeight": {
           "type": "number",
           "default": 30,
           "minimum": 20,
           "maximum": 60,
           "description": "Signal row height in pixels"
         },
-        "waveforge.waveViewer.defaultFormat": {
+        "chronam.waveViewer.defaultFormat": {
           "type": "string",
           "default": "hex",
           "enum": ["hex", "binary", "decimal", "unsigned", "signed"],
           "description": "Default display format for vector signals"
         },
-        "waveforge.testbench.defaultClockPeriodNs": {
+        "chronam.testbench.defaultClockPeriodNs": {
           "type": "number",
           "default": 10,
           "description": "Default clock period in nanoseconds"
         },
-        "waveforge.testbench.autoDetect": {
+        "chronam.testbench.autoDetect": {
           "type": "boolean",
           "default": true,
           "description": "Automatically detect clock and reset signals"
         },
-        "waveforge.general.autoOpenWaveViewer": {
+        "chronam.general.autoOpenWaveViewer": {
           "type": "boolean",
           "default": true,
           "description": "Auto-open wave viewer after successful simulation"
@@ -157,11 +157,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@waveforge/shared-types": "workspace:*",
-    "@waveforge/vhdl-parser": "workspace:*",
-    "@waveforge/vcd-parser": "workspace:*",
-    "@waveforge/testbench-generator": "workspace:*",
-    "@waveforge/simulation-engine": "workspace:*"
+    "@chronam/shared-types": "workspace:*",
+    "@chronam/vhdl-parser": "workspace:*",
+    "@chronam/vcd-parser": "workspace:*",
+    "@chronam/testbench-generator": "workspace:*",
+    "@chronam/simulation-engine": "workspace:*"
   },
   "devDependencies": {
     "@types/vscode": "^1.85.0",

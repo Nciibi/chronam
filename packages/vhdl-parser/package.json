@@ -1,5 +1,5 @@
 {
-  "name": "@waveforge/vhdl-parser",
+  "name": "@chronam/vhdl-parser",
   "version": "0.1.0",
   "private": true,
   "main": "./dist/index.js",
@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@waveforge/shared-types": "workspace:*"
+    "@chronam/shared-types": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.5.0",

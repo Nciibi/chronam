@@ -1,11 +1,11 @@
 // ============================================================================
-// WaveForge — Wave Viewer Webview Panel
+// Chronam — Wave Viewer Webview Panel
 // ============================================================================
 import * as vscode from 'vscode';
-import type { WaveformData, Entity, SimulationConfig, ExtensionToWebviewMessage, WebviewToExtensionMessage } from '@waveforge/shared-types';
+import type { WaveformData, Entity, SimulationConfig, ExtensionToWebviewMessage, WebviewToExtensionMessage } from '@chronam/shared-types';
 
 export class WaveViewerPanel {
-  public static readonly viewType = 'waveforge.waveViewer';
+  public static readonly viewType = 'chronam.waveViewer';
   private static instance: WaveViewerPanel | undefined;
 
   private readonly panel: vscode.WebviewPanel;
@@ -29,7 +29,7 @@ export class WaveViewerPanel {
 
     const panel = vscode.window.createWebviewPanel(
       WaveViewerPanel.viewType,
-      'WaveForge Viewer',
+      'Chronam Viewer',
       vscode.ViewColumn.Beside,
       {
         enableScripts: true,
@@ -79,7 +79,7 @@ export class WaveViewerPanel {
         }
         break;
       case 'simulation:run':
-        vscode.commands.executeCommand('waveforge.runSimulation');
+        vscode.commands.executeCommand('chronam.runSimulation');
         break;
     }
   }
@@ -101,7 +101,7 @@ export class WaveViewerPanel {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';">
-  <title>WaveForge Viewer</title>
+  <title>Chronam Viewer</title>
   <style>
     :root {
       --bg: var(--vscode-editor-background, #1e1e1e);

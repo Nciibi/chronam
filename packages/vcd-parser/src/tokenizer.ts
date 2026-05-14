@@ -1,5 +1,5 @@
 // ============================================================================
-// WaveForge — VCD Tokenizer
+// Chronam — VCD Tokenizer
 // ============================================================================
 // Low-level tokenizer for IEEE 1364 Value Change Dump files.
 // Produces a stream of typed tokens consumed by the parser.

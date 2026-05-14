@@ -1,5 +1,5 @@
 // ============================================================================
-// WaveForge — GHDL Simulator Adapter
+// Chronam — GHDL Simulator Adapter
 // ============================================================================
 // Implements the SimulatorAdapter interface for GHDL.
 // Handles analysis (-a), elaboration (-e), and simulation (-r) phases.
@@ -16,7 +16,7 @@ import type {
   CompileResult,
   SimulationError,
   VHDLVersion,
-} from '@waveforge/shared-types';
+} from '@chronam/shared-types';
 import type { SimulatorAdapter } from './adapter.js';
 import { runProcess, commandExists } from './runner.js';
 

@@ -1,5 +1,5 @@
 // ============================================================================
-// WaveForge — Testbench Generator
+// Chronam — Testbench Generator
 // ============================================================================
 // Generates synthesizable VHDL testbenches from parsed entity information
 // and simulation configuration. Produces complete, runnable testbenches
@@ -12,8 +12,8 @@ import type {
   VHDLType,
   ClockConfig,
   SimulationConfig,
-} from '@waveforge/shared-types';
-import { getDefaultValue } from '@waveforge/shared-types';
+} from '@chronam/shared-types';
+import { getDefaultValue } from '@chronam/shared-types';
 
 /** Options controlling testbench generation */
 export interface TestbenchOptions {
@@ -60,7 +60,7 @@ export function generateTestbench(entity: Entity, options: TestbenchOptions): Te
   const lines: string[] = [];
 
   // Library declarations
-  lines.push('-- Auto-generated testbench by WaveForge');
+  lines.push('-- Auto-generated testbench by Chronam');
   lines.push(`-- Entity: ${entity.name}`);
   lines.push(`-- Generated: ${new Date().toISOString()}`);
   lines.push('');

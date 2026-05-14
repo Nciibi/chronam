@@ -1,5 +1,5 @@
 // ============================================================================
-// WaveForge — Webview Message Protocol
+// Chronam — Webview Message Protocol
 // ============================================================================
 // Defines the strongly-typed message protocol between the VS Code extension
 // host and the webview panels. All communication goes through postMessage.

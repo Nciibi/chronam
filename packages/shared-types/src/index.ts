@@ -1,4 +1,4 @@
-// WaveForge — Shared Types barrel export
+// Chronam — Shared Types barrel export
 export * from './vhdl.js';
 export * from './simulation.js';
 export * from './waveform.js';

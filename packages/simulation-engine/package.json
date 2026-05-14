@@ -1,5 +1,5 @@
 {
-  "name": "@waveforge/simulation-engine",
+  "name": "@chronam/simulation-engine",
   "version": "0.1.0",
   "private": true,
   "main": "./dist/index.js",
@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@waveforge/shared-types": "workspace:*"
+    "@chronam/shared-types": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^25.7.0",

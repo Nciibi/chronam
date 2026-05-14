@@ -1,5 +1,5 @@
 // ============================================================================
-// WaveForge — Simulation Service
+// Chronam — Simulation Service
 // ============================================================================
 // Central orchestrator for the simulation pipeline within the extension.
 // Manages: parsing → testbench generation → compilation → simulation →
@@ -9,17 +9,17 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs/promises';
-import { parseVHDLFile, extractFirstEntity } from '@waveforge/vhdl-parser';
-import { generateTestbench } from '@waveforge/testbench-generator';
-import { SimulationEngine } from '@waveforge/simulation-engine';
-import { parseVCD } from '@waveforge/vcd-parser';
+import { parseVHDLFile, extractFirstEntity } from '@chronam/vhdl-parser';
+import { generateTestbench } from '@chronam/testbench-generator';
+import { SimulationEngine } from '@chronam/simulation-engine';
+import { parseVCD } from '@chronam/vcd-parser';
 import type {
   Entity,
   SimulationConfig,
   SimulationStatus,
   WaveformData,
-} from '@waveforge/shared-types';
-import { createDefaultSimConfig, createDefaultClock } from '@waveforge/shared-types';
+} from '@chronam/shared-types';
+import { createDefaultSimConfig, createDefaultClock } from '@chronam/shared-types';
 import { WaveViewerPanel } from '../webview/waveViewerPanel';
 import type { Logger } from '../utils/logger';
 
@@ -40,7 +40,7 @@ export class SimulationService {
     this.logger = logger;
 
     // Read custom GHDL path from settings
-    const config = vscode.workspace.getConfiguration('waveforge');
+    const config = vscode.workspace.getConfiguration('chronam');
     const ghdlPath = config.get<string>('simulator.ghdlPath', '');
     this.engine = new SimulationEngine('ghdl', ghdlPath || undefined);
   }
@@ -85,7 +85,7 @@ export class SimulationService {
         'Set Custom Path'
       );
       if (action === 'Set Custom Path') {
-        vscode.commands.executeCommand('workbench.action.openSettings', 'waveforge.simulator.ghdlPath');
+        vscode.commands.executeCommand('workbench.action.openSettings', 'chronam.simulator.ghdlPath');
       }
       return;
     }
@@ -97,7 +97,7 @@ export class SimulationService {
 
     const filePath = document.uri.fsPath;
     const fileContent = document.getText();
-    const workDir = path.join(path.dirname(filePath), '.waveforge');
+    const workDir = path.join(path.dirname(filePath), '.chronam');
 
     try {
       // Phase 1: Parse VHDL
@@ -140,7 +140,7 @@ export class SimulationService {
 
       const tbResult = generateTestbench(entity, {
         config,
-        resetDurationNs: vscode.workspace.getConfiguration('waveforge')
+        resetDurationNs: vscode.workspace.getConfiguration('chronam')
           .get<number>('testbench.defaultClockPeriodNs', 10) * 2,
       });
 
@@ -193,7 +193,7 @@ export class SimulationService {
         this.logger.info(`Loaded ${waveformData.signals.length} signals, end time: ${waveformData.endTime}`);
 
         // Phase 5: Open waveform viewer
-        const autoOpen = vscode.workspace.getConfiguration('waveforge')
+        const autoOpen = vscode.workspace.getConfiguration('chronam')
           .get<boolean>('general.autoOpenWaveViewer', true);
 
         if (autoOpen) {
@@ -297,7 +297,7 @@ export class SimulationService {
   // ─── Private Helpers ──────────────────────────────────────────────────
 
   private buildSimConfig(entity: Entity): SimulationConfig {
-    const vsConfig = vscode.workspace.getConfiguration('waveforge');
+    const vsConfig = vscode.workspace.getConfiguration('chronam');
     const config = createDefaultSimConfig();
 
     config.durationNs = vsConfig.get<number>('simulator.defaultDurationNs', 1000);
@@ -347,7 +347,7 @@ export class SimulationService {
         : vscode.DiagnosticSeverity.Warning;
 
       const diag = new vscode.Diagnostic(range, err.translated, severity);
-      diag.source = 'WaveForge';
+      diag.source = 'Chronam';
 
       const key = uri.toString();
       if (!diagMap.has(key)) diagMap.set(key, []);

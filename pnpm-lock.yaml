@@ -26,19 +26,19 @@ importers:
 
   apps/vscode-extension:
     dependencies:
-      '@waveforge/shared-types':
+      '@chronam/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
-      '@waveforge/simulation-engine':
+      '@chronam/simulation-engine':
         specifier: workspace:*
         version: link:../../packages/simulation-engine
-      '@waveforge/testbench-generator':
+      '@chronam/testbench-generator':
         specifier: workspace:*
         version: link:../../packages/testbench-generator
-      '@waveforge/vcd-parser':
+      '@chronam/vcd-parser':
         specifier: workspace:*
         version: link:../../packages/vcd-parser
-      '@waveforge/vhdl-parser':
+      '@chronam/vhdl-parser':
         specifier: workspace:*
         version: link:../../packages/vhdl-parser
     devDependencies:
@@ -60,7 +60,7 @@ importers:
 
   packages/simulation-engine:
     dependencies:
-      '@waveforge/shared-types':
+      '@chronam/shared-types':
         specifier: workspace:*
         version: link:../shared-types
     devDependencies:
@@ -76,7 +76,7 @@ importers:
 
   packages/testbench-generator:
     dependencies:
-      '@waveforge/shared-types':
+      '@chronam/shared-types':
         specifier: workspace:*
         version: link:../shared-types
     devDependencies:
@@ -89,7 +89,7 @@ importers:
 
   packages/vcd-parser:
     dependencies:
-      '@waveforge/shared-types':
+      '@chronam/shared-types':
         specifier: workspace:*
         version: link:../shared-types
     devDependencies:
@@ -102,7 +102,7 @@ importers:
 
   packages/vhdl-parser:
     dependencies:
-      '@waveforge/shared-types':
+      '@chronam/shared-types':
         specifier: workspace:*
         version: link:../shared-types
     devDependencies:
@@ -115,7 +115,7 @@ importers:
 
   packages/wave-renderer:
     dependencies:
-      '@waveforge/shared-types':
+      '@chronam/shared-types':
         specifier: workspace:*
         version: link:../shared-types
     devDependencies:

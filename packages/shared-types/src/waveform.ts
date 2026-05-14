@@ -1,5 +1,5 @@
 // ============================================================================
-// WaveForge — Waveform Data Types
+// Chronam — Waveform Data Types
 // ============================================================================
 // Data model for parsed waveform files (VCD, GHW, FST).
 // These types represent the in-memory model consumed by the renderer.

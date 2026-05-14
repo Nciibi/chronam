@@ -1,5 +1,5 @@
 // ============================================================================
-// WaveForge — VS Code Extension Entry Point
+// Chronam — VS Code Extension Entry Point
 // ============================================================================
 // Activates the extension, registers all commands, providers, and services.
 // This is the main lifecycle manager for the extension.
@@ -15,8 +15,8 @@ import { Logger } from './utils/logger';
 let logger: Logger;
 
 export function activate(context: vscode.ExtensionContext) {
-  logger = new Logger('WaveForge');
-  logger.info('WaveForge extension activating...');
+  logger = new Logger('Chronam');
+  logger.info('Chronam extension activating...');
 
   // Initialize core services
   const simulationService = new SimulationService(context, logger);
@@ -34,7 +34,7 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   // Register diagnostics collection
-  const diagnostics = vscode.languages.createDiagnosticCollection('waveforge');
+  const diagnostics = vscode.languages.createDiagnosticCollection('chronam');
   context.subscriptions.push(diagnostics);
   simulationService.setDiagnostics(diagnostics);
 
@@ -43,9 +43,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.StatusBarAlignment.Left,
     100
   );
-  statusBarItem.text = '$(circuit-board) WaveForge';
-  statusBarItem.tooltip = 'WaveForge VHDL Simulation';
-  statusBarItem.command = 'waveforge.runSimulation';
+  statusBarItem.text = '$(circuit-board) Chronam';
+  statusBarItem.tooltip = 'Chronam VHDL Simulation';
+  statusBarItem.command = 'chronam.runSimulation';
   statusBarItem.show();
   context.subscriptions.push(statusBarItem);
 
@@ -53,7 +53,7 @@ export function activate(context: vscode.ExtensionContext) {
   simulationService.onStatusChange((status) => {
     switch (status.state) {
       case 'idle':
-        statusBarItem.text = '$(circuit-board) WaveForge';
+        statusBarItem.text = '$(circuit-board) Chronam';
         statusBarItem.tooltip = 'Click to run simulation';
         break;
       case 'compiling':
@@ -68,21 +68,21 @@ export function activate(context: vscode.ExtensionContext) {
       case 'completed':
         statusBarItem.text = '$(check) Simulation Complete';
         setTimeout(() => {
-          statusBarItem.text = '$(circuit-board) WaveForge';
+          statusBarItem.text = '$(circuit-board) Chronam';
         }, 3000);
         break;
       case 'failed':
         statusBarItem.text = '$(error) Simulation Failed';
         setTimeout(() => {
-          statusBarItem.text = '$(circuit-board) WaveForge';
+          statusBarItem.text = '$(circuit-board) Chronam';
         }, 5000);
         break;
     }
   });
 
-  logger.info('WaveForge extension activated');
+  logger.info('Chronam extension activated');
 }
 
 export function deactivate() {
-  logger?.info('WaveForge extension deactivated');
+  logger?.info('Chronam extension deactivated');
 }

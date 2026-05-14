@@ -1,5 +1,5 @@
 // ============================================================================
-// WaveForge — Simulator Adapter Interface
+// Chronam — Simulator Adapter Interface
 // ============================================================================
 // Abstract interface for simulator backends. Implement this to add support
 // for new simulators (GHDL, ModelSim, Verilator, etc.).
@@ -13,7 +13,7 @@ import type {
   CompileResult,
   SimulationError,
   VHDLVersion,
-} from '@waveforge/shared-types';
+} from '@chronam/shared-types';
 
 /**
  * Interface that all simulator adapters must implement.

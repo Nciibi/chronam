@@ -1,8 +1,8 @@
-# WaveForge — Architecture & Implementation Plan
+# Chronam — Architecture & Implementation Plan
 
 ## 1. Vision
 
-WaveForge is a modern, open-source VHDL development environment delivered as a VS Code extension. It replaces the fragmented, painful UX of legacy HDL tools (ModelSim, Vivado Simulator) with a unified, fast, visual experience inspired by Chrome DevTools and modern observability dashboards.
+Chronam is a modern, open-source VHDL development environment delivered as a VS Code extension. It replaces the fragmented, painful UX of legacy HDL tools (ModelSim, Vivado Simulator) with a unified, fast, visual experience inspired by Chrome DevTools and modern observability dashboards.
 
 ---
 
@@ -60,7 +60,7 @@ graph TD
 ## 3. Monorepo Structure
 
 ```
-waveforge/
+chronam/
 ├── .vscode/                     # Workspace settings
 ├── apps/
 │   └── vscode-extension/        # VS Code extension entry point
@@ -512,9 +512,9 @@ WaveformData → Layout Engine → Viewport Calculation → Canvas Draw Calls
 | 11 | Documentation & README | docs | 2h |
 
 ### Deliverables
-- `waveforge.runSimulation` command
-- `waveforge.generateTestbench` command
-- `waveforge.openWaveViewer` command
+- `chronam.runSimulation` command
+- `chronam.generateTestbench` command
+- `chronam.openWaveViewer` command
 - Working waveform viewer in webview panel
 - GHDL error diagnostics in Problems panel
 - Basic zoom/pan on waveforms

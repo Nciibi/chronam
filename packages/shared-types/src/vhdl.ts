@@ -1,5 +1,5 @@
 // ============================================================================
-// WaveForge — VHDL Domain Types
+// Chronam — VHDL Domain Types
 // ============================================================================
 // Core type definitions for representing parsed VHDL design units.
 // These types model the essential structural information extracted from VHDL

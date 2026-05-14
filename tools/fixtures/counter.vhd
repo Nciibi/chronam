@@ -1,4 +1,4 @@
--- WaveForge Test Fixture: 4-bit Counter
+-- Chronam Test Fixture: 4-bit Counter
 -- A simple counter design for testing the simulation pipeline.
 
 library ieee;

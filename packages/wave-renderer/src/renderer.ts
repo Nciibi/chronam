@@ -1,5 +1,5 @@
 // ============================================================================
-// WaveForge — Waveform Canvas Renderer
+// Chronam — Waveform Canvas Renderer
 // ============================================================================
 // High-performance Canvas 2D renderer for digital waveforms. Renders:
 // - Signal labels with hierarchy
@@ -21,8 +21,8 @@ import type {
   CursorState,
   SignalDisplayConfig,
   SignalDisplayFormat,
-} from '@waveforge/shared-types';
-import { formatSignalValue, formatTime } from '@waveforge/shared-types';
+} from '@chronam/shared-types';
+import { formatSignalValue, formatTime } from '@chronam/shared-types';
 import { Viewport } from './viewport.js';
 import type { RenderColors } from './themes.js';
 import { getDefaultColors } from './themes.js';

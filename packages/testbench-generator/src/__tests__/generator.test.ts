@@ -1,11 +1,11 @@
 // ============================================================================
-// WaveForge — Testbench Generator Tests
+// Chronam — Testbench Generator Tests
 // ============================================================================
 
 import { describe, it, expect } from 'vitest';
 import { generateTestbench } from '../generator.js';
-import type { Entity, SimulationConfig } from '@waveforge/shared-types';
-import { createDefaultSimConfig } from '@waveforge/shared-types';
+import type { Entity, SimulationConfig } from '@chronam/shared-types';
+import { createDefaultSimConfig } from '@chronam/shared-types';
 
 const counterEntity: Entity = {
   name: 'counter',

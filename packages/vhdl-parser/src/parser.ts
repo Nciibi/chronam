@@ -1,5 +1,5 @@
 // ============================================================================
-// WaveForge — VHDL Entity/Port Parser
+// Chronam — VHDL Entity/Port Parser
 // ============================================================================
 // Regex-based VHDL parser for extracting entities, ports, generics, and
 // architectures. This is the initial implementation — will be replaced by
@@ -22,7 +22,7 @@ import type {
   PortDirection,
   SourceLocation,
   ParseDiagnostic,
-} from '@waveforge/shared-types';
+} from '@chronam/shared-types';
 
 /**
  * Parse a VHDL file and extract all design units.

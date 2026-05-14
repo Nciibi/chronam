@@ -1,5 +1,5 @@
 // ============================================================================
-// WaveForge — VCD Parser
+// Chronam — VCD Parser
 // ============================================================================
 // Parses IEEE 1364 Value Change Dump (VCD) files into WaveformData.
 // Handles header sections (date, version, timescale, variable definitions)
@@ -17,7 +17,7 @@ import type {
   TimeUnit,
   WaveformMetadata,
   ScalarValue,
-} from '@waveforge/shared-types';
+} from '@chronam/shared-types';
 
 // ─── Internal types for parsing ─────────────────────────────────────────────
 

@@ -1,11 +1,11 @@
 // ============================================================================
-// WaveForge — Configuration Types
+// Chronam — Configuration Types
 // ============================================================================
 
 import type { SimulatorId, VHDLVersion } from './simulation.js';
 import type { SignalDisplayFormat } from './waveform.js';
 
-export interface WaveForgeConfig {
+export interface ChronamConfig {
   simulator: SimulatorConfig;
   waveViewer: WaveViewerConfig;
   testbench: TestbenchConfig;
@@ -43,7 +43,7 @@ export interface GeneralConfig {
   logLevel: 'debug' | 'info' | 'warn' | 'error';
 }
 
-export const DEFAULT_CONFIG: WaveForgeConfig = {
+export const DEFAULT_CONFIG: ChronamConfig = {
   simulator: {
     preferred: 'ghdl',
     ghdlPath: '',
@@ -68,7 +68,7 @@ export const DEFAULT_CONFIG: WaveForgeConfig = {
   general: {
     autoOpenWaveViewer: true,
     clearOnRerun: true,
-    workDir: '.waveforge',
+    workDir: '.chronam',
     logLevel: 'info',
   },
 };

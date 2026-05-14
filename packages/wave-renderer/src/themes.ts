@@ -1,12 +1,12 @@
 // ============================================================================
-// WaveForge — Theme Manager
+// Chronam — Theme Manager
 // ============================================================================
 // Color themes for the waveform renderer, designed to integrate with
 // VS Code's light and dark themes.
 // ============================================================================
 
-import type { ThemeConfig } from '@waveforge/shared-types';
-import { DEFAULT_DARK_THEME, DEFAULT_LIGHT_THEME } from '@waveforge/shared-types';
+import type { ThemeConfig } from '@chronam/shared-types';
+import { DEFAULT_DARK_THEME, DEFAULT_LIGHT_THEME } from '@chronam/shared-types';
 
 export interface RenderColors {
   background: string;

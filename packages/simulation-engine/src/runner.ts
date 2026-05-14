@@ -1,5 +1,5 @@
 // ============================================================================
-// WaveForge — Process Runner
+// Chronam — Process Runner
 // ============================================================================
 // Cross-platform utility for spawning simulator CLI processes.
 // Wraps Node.js child_process with timeout, cancellation, and output capture.

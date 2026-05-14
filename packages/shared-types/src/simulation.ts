@@ -1,5 +1,5 @@
 // ============================================================================
-// WaveForge — Simulation Types
+// Chronam — Simulation Types
 // ============================================================================
 // Type definitions for simulation configuration, execution, and results.
 // Designed to be simulator-agnostic with adapter-specific extensions.

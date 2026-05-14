@@ -1,4 +1,4 @@
--- WaveForge Test Fixture: ALU
+-- Chronam Test Fixture: ALU
 -- A more complex design for testing multi-port entity parsing.
 
 library ieee;

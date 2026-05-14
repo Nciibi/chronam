@@ -1,5 +1,5 @@
 // ============================================================================
-// WaveForge — Simulation Engine
+// Chronam — Simulation Engine
 // ============================================================================
 // Top-level orchestrator that coordinates parsing → testbench generation →
 // compilation → simulation → waveform output. This is the main entry point
@@ -13,7 +13,7 @@ import type {
   SimulationResult,
   SimulatorId,
   SimulatorInfo,
-} from '@waveforge/shared-types';
+} from '@chronam/shared-types';
 import type { SimulatorAdapter, SimulationProgressCallback } from './adapter.js';
 import { GHDLAdapter } from './ghdl.js';
 
