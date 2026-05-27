@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc -b",
     "clean": "rm -rf dist",
-    "test": "vitest run"
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@chronam/shared-types": "workspace:*",

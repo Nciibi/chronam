@@ -19,6 +19,8 @@ Chronam is a monorepo with the following packages:
 - `testbench-generator` — Generates testbench VHDL from entity definitions
 - `simulation-engine` — Orchestrates GHDL compilation and simulation
 - `wave-renderer` — Canvas 2D waveform rendering engine
+- `wave-viewer` — React + Zustand webview app for waveform display
+- `core` — Editor-agnostic simulation orchestration (delegate pattern)
 - `vscode-extension` — VS Code extension entry point
 
 ## Guidelines
