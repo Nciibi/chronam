@@ -162,7 +162,8 @@
     "@chronam/vhdl-parser": "workspace:*",
     "@chronam/vcd-parser": "workspace:*",
     "@chronam/testbench-generator": "workspace:*",
-    "@chronam/simulation-engine": "workspace:*"
+    "@chronam/simulation-engine": "workspace:*",
+    "@chronam/core": "workspace:*"
   },
   "devDependencies": {
     "@types/vscode": "^1.85.0",

@@ -50,7 +50,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(statusBarItem);
 
   // Update status bar based on simulation state
-  simulationService.onStatusChange((status) => {
+  simulationService.addStatusListener((status) => {
     switch (status.state) {
       case 'idle':
         statusBarItem.text = '$(circuit-board) Chronam';
