@@ -13,6 +13,10 @@ export class WaveViewerPanel {
   private disposables: vscode.Disposable[] = [];
   private waveformData: WaveformData | null = null;
 
+  public static get isOpen(): boolean {
+    return !!WaveViewerPanel.instance;
+  }
+
   public static createOrShow(
     context: vscode.ExtensionContext,
     waveformData?: WaveformData,

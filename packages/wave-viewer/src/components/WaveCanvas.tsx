@@ -282,8 +282,33 @@ export function WaveCanvas() {
   }, [viewport, setViewport, setCursor]);
 
   return (
-    <div ref={containerRef} style={{ width: '100%', height: 'calc(100vh - 36px)', overflow: 'hidden', cursor: 'crosshair', position: 'relative' }}>
-      <canvas ref={canvasRef} style={{ position: 'absolute', top: 0, left: 0 }} />
+    <div style={{
+      width: '100%',
+      height: 'calc(100vh - 36px)',
+      background: 'var(--vscode-editorGroup-emptyBackground, #181818)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '24px',
+      boxSizing: 'border-box'
+    }}>
+      <div 
+        ref={containerRef} 
+        style={{ 
+          width: '100%', 
+          height: '100%', 
+          maxWidth: '1200px',
+          overflow: 'hidden', 
+          cursor: 'crosshair', 
+          position: 'relative',
+          background: 'var(--vscode-editor-background, #1e1e1e)',
+          borderRadius: '12px',
+          boxShadow: '0 12px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--vscode-panel-border, #3c3c3c)',
+          clipPath: 'inset(0 0 0 0 round 12px)'
+        }}
+      >
+        <canvas ref={canvasRef} style={{ position: 'absolute', top: 0, left: 0 }} />
+      </div>
     </div>
   );
 }

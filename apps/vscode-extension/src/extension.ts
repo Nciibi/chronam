@@ -80,6 +80,16 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
 
+  // Live Preview: Auto-run simulation on file save if the wave viewer is open
+  context.subscriptions.push(
+    vscode.workspace.onDidSaveTextDocument(async (document) => {
+      if (document.languageId === 'vhdl' && WaveViewerPanel.isOpen) {
+        logger.info('Live Preview: Re-running simulation on save');
+        await simulationService.runSimulation();
+      }
+    })
+  );
+
   logger.info('Chronam extension activated');
 }
 
