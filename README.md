@@ -11,7 +11,7 @@
     <a href="https://github.com/Nciibi/chronam"><img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-success?style=flat-square" alt="Platform"></a>
     <a href="https://github.com/Nciibi/chronam"><img src="https://img.shields.io/badge/TypeScript-5.x-blue?style=flat-square&logo=typescript" alt="TypeScript"></a>
   </p>
-  <br />
+  <br />  
 </div>
 
 **Chronam** is a high-performance, cross-platform extension for Visual Studio Code designed to replace the fragmented, painful UX of legacy HDL tools. It brings parsing, compiling, simulating, and a blazing fast hardware-accelerated waveform viewer directly into your favorite editor.
