@@ -10,7 +10,7 @@
     <a href="https://marketplace.visualstudio.com/items?itemName=Nciibi.chronam"><img src="https://img.shields.io/badge/VS%20Code-Extension-007ACC?style=flat-square&logo=visual-studio-code" alt="VS Code Extension"></a>
     <a href="https://github.com/Nciibi/chronam"><img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-success?style=flat-square" alt="Platform"></a>
     <a href="https://github.com/Nciibi/chronam"><img src="https://img.shields.io/badge/TypeScript-5.x-blue?style=flat-square&logo=typescript" alt="TypeScript"></a>
-  </p>
+  </p>   
   <br />                   
 </div>
 
