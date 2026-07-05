@@ -15,28 +15,18 @@ architecture sim of tb_counter is
     signal sim_done : boolean := false;
 begin
     uut : entity work.counter
-        port map (
-            clk => clk,
-            reset => reset,
-            q => q
-        );
+        port map (clk => clk, reset => reset, q => q);
     clk_proc : process
     begin
         while not sim_done loop
-            clk <= '0';
-            wait for CLK_HALF;
-            clk <= '1';
-            wait for CLK_HALF;
-        end loop;
-        wait;
+            clk <= '0'; wait for CLK_HALF;
+            clk <= '1'; wait for CLK_HALF;
+        end loop; wait;
     end process;
     stim_proc : process
     begin
-        reset <= '1';
-        wait for 20 ns;
-        reset <= '0';
-        wait for 1000 ns;
-        sim_done <= true;
-        wait;
+        reset <= '1'; wait for 20 ns;
+        reset <= '0'; wait for 1000 ns;
+        sim_done <= true; wait;
     end process;
 end architecture sim;
