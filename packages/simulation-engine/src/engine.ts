@@ -13,6 +13,7 @@ import type {
   SimulationResult,
   SimulatorId,
   SimulatorInfo,
+  VHDLVersion,
 } from '@chronam/shared-types';
 import type { SimulatorAdapter, SimulationProgressCallback } from './adapter.js';
 import { GHDLAdapter } from './ghdl.js';
