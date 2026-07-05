@@ -77,12 +77,14 @@ export class SimulationEngine {
     const tbFilePath = path.join(workDir, `${testbenchEntityName}.vhd`);
     await fs.writeFile(tbFilePath, testbenchSource, 'utf-8');
 
+    const vhdlVersion: VHDLVersion = config.simulator === 'ghdl' ? '2008' : '2008';
+
     // Phase 1: Analyze design file
     onProgress?.('compiling', `Analyzing ${path.basename(designSource)}`);
     const analyzeDesign = await this.adapter.analyze(
       [designSource],
       workDir,
-      config.simulator === 'ghdl' ? '2008' : undefined
+      vhdlVersion
     );
 
     if (!analyzeDesign.success) {
@@ -100,7 +102,7 @@ export class SimulationEngine {
     const analyzeTb = await this.adapter.analyze(
       [tbFilePath],
       workDir,
-      config.simulator === 'ghdl' ? '2008' : undefined
+      vhdlVersion
     );
 
     if (!analyzeTb.success) {
@@ -115,7 +117,7 @@ export class SimulationEngine {
 
     // Phase 3: Elaborate
     onProgress?.('elaborating', testbenchEntityName);
-    const elaborateResult = await this.adapter.elaborate(testbenchEntityName, workDir);
+    const elaborateResult = await this.adapter.elaborate(testbenchEntityName, workDir, vhdlVersion);
 
     if (!elaborateResult.success) {
       return {
@@ -129,7 +131,7 @@ export class SimulationEngine {
 
     // Phase 4: Run simulation
     onProgress?.('running', `Simulating ${testbenchEntityName}`);
-    const simResult = await this.adapter.run(testbenchEntityName, config, workDir);
+    const simResult = await this.adapter.run(testbenchEntityName, config, workDir, vhdlVersion);
 
     return simResult;
   }
