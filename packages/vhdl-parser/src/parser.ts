@@ -89,11 +89,16 @@ function extractEntities(content: string, uri: string, errors: ParseDiagnostic[]
 function extractPorts(entityBody: string, uri: string, errors: ParseDiagnostic[]): Port[] {
   const ports: Port[] = [];
 
-  // Find port(...) section
-  const portSectionMatch = entityBody.match(/port\s*\(([\s\S]*?)\)\s*;/i);
-  if (!portSectionMatch) return ports;
+  // Find port(...) section — must handle balanced parentheses inside types
+  // like std_logic_vector(7 downto 0) which contain nested parens.
+  const portStart = entityBody.match(/port\s*\(/i);
+  if (!portStart) return ports;
 
-  const portSection = portSectionMatch[1];
+  const openIdx = portStart.index! + portStart[0].length - 1; // index of '('
+  const closeIdx = findBalancedClose(entityBody, openIdx);
+  if (closeIdx === -1) return ports;
+
+  const portSection = entityBody.slice(openIdx + 1, closeIdx);
 
   // Split by semicolons to get individual port declarations
   const portDeclarations = portSection.split(';').filter((s) => s.trim().length > 0);
