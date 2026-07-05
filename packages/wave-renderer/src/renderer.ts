@@ -261,7 +261,7 @@ export class WaveformRenderer {
     ctx.lineTo(config.labelWidth - 0.5, height);
     ctx.stroke();
 
-    // Signal names
+      // Signal names
     ctx.font = `${config.fontSize}px ${config.fontFamily}`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
@@ -284,7 +284,7 @@ export class WaveformRenderer {
 
       // Signal name
       ctx.fillStyle = colors.foreground;
-      const displayName = signal.name;
+      const displayName = signal.fullName;
       ctx.fillText(
         truncateText(ctx, displayName, config.labelWidth - 24),
         18,
@@ -361,7 +361,7 @@ export class WaveformRenderer {
       const val = t.value.value;
 
       // Choose color
-      if (val === 'x') {
+      if (val === 'x' || val === 'x') {
         ctx.strokeStyle = colors.signalX;
         ctx.fillStyle = colors.signalX + '20';
       } else if (val === 'z') {
