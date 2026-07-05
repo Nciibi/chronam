@@ -1,6 +1,7 @@
 import { useWaveStore } from '../store/useWaveStore';
 import { Toolbar } from './Toolbar';
 import { WaveCanvas } from './WaveCanvas';
+import { EmptyState } from './EmptyState';
 
 export function WaveformsPanel() {
   const waveformData = useWaveStore((s) => s.waveformData);
@@ -11,21 +12,7 @@ export function WaveformsPanel() {
       {waveformData ? (
         <WaveCanvas />
       ) : (
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flex: 1,
-          opacity: 0.5,
-          gap: 12,
-          fontFamily: '"Cascadia Code","JetBrains Mono","IBM Plex Mono",monospace',
-          fontSize: 13,
-        }}>
-          <div style={{ fontSize: 48 }}>〰</div>
-          <p>No waveform data available</p>
-          <p style={{ fontSize: 11, opacity: 0.6 }}>Run a simulation to view waveforms</p>
-        </div>
+        <EmptyState icon="〰" text="No waveform data" sub="Run a simulation to view signal waveforms" />
       )}
     </div>
   );

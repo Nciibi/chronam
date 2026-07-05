@@ -1,5 +1,6 @@
 import { useChronamStore } from '../store/useChronamStore';
 import { postMessage } from '../vscode';
+import { EmptyState } from './EmptyState';
 
 const s: Record<string, React.CSSProperties> = {
   panel: {
@@ -38,7 +39,7 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: 12,
     fontFamily: 'inherit',
     textAlign: 'center',
-    transition: 'background .15s',
+    transition: 'background .12s',
   },
   btnActive: {
     background: '#0e639c',
@@ -89,37 +90,43 @@ export function SimulationPanel() {
     <div style={s.panel}>
       <div style={s.header}>Simulation Controls</div>
       <div style={s.controls}>
-        <button style={simState.status === 'running' ? s.btnActive : s.btn} onClick={() => postMessage({ type: 'simulation:run', config: {} as any })}>
+        <button style={simState.status === 'running' ? s.btnActive : s.btn} title="Run simulation" onClick={() => postMessage({ type: 'simulation:run', config: {} as any })}>
           ▶ Run
         </button>
-        <button style={s.btn}>⏸ Pause</button>
-        <button style={s.btn}>▶ Resume</button>
-        <button style={s.btn}>⟳ Restart</button>
-        <button style={s.btn}>■ Stop</button>
+        <button style={s.btn} title="Pause simulation">⏸ Pause</button>
+        <button style={s.btn} title="Resume simulation">▶ Resume</button>
+        <button style={s.btn} title="Restart simulation">⟳ Restart</button>
+        <button style={s.btn} title="Stop simulation">■ Stop</button>
       </div>
       <div style={s.controls}>
-        <button style={s.btn}>⏪ Step</button>
-        <button style={s.btn}>⏩ Step Over</button>
-        <button style={s.btn}>↕ Step Into</button>
+        <button style={s.btn} title="Step one time unit">⏪ Step</button>
+        <button style={s.btn} title="Step over">⏩ Step Over</button>
+        <button style={s.btn} title="Step into">↕ Step Into</button>
       </div>
-      <div style={s.infoGrid}>
-        <span style={s.infoLabel}>Simulation Time</span>
-        <span style={s.infoValue}>{simState.currentTime}</span>
-        <span style={s.infoLabel}>Events</span>
-        <span style={s.infoValue}>{simState.events.toLocaleString()}</span>
-        <span style={s.infoLabel}>Speed</span>
-        <span style={s.infoValue}>{simState.speed}</span>
-        <span style={s.infoLabel}>Status</span>
-        <span style={{ ...s.infoValue, textTransform: 'uppercase', color: simState.status === 'failed' ? '#f44747' : simState.status === 'completed' ? '#4ec9b0' : undefined }}>
-          {simState.status}
-        </span>
-      </div>
-      <div style={s.header}>Simulation Log</div>
-      <div style={s.log}>
-        {['> Analyzing design units...', '> Elaborating entity counter...', '> Running simulation...', '  Time: 0 ns | Events: 0', '  Time: 500 ns | Events: 1250', '  Time: 1000 ns | Events: 2500'].map((line, i) => (
-          <div key={i}>{line}</div>
-        ))}
-      </div>
+      {simState.status === 'idle' ? (
+        <EmptyState icon="▶" text="No simulation running" sub="Click Run to start a simulation" />
+      ) : (
+        <>
+          <div style={s.infoGrid}>
+            <span style={s.infoLabel}>Simulation Time</span>
+            <span style={s.infoValue}>{simState.currentTime}</span>
+            <span style={s.infoLabel}>Events</span>
+            <span style={s.infoValue}>{simState.events.toLocaleString()}</span>
+            <span style={s.infoLabel}>Speed</span>
+            <span style={s.infoValue}>{simState.speed}</span>
+            <span style={s.infoLabel}>Status</span>
+            <span style={{ ...s.infoValue, textTransform: 'uppercase', color: simState.status === 'failed' ? '#f44747' : simState.status === 'completed' ? '#4ec9b0' : undefined }}>
+              {simState.status}
+            </span>
+          </div>
+          <div style={s.header}>Simulation Log</div>
+          <div style={s.log}>
+            {['> Analyzing design units...', '> Elaborating entity counter...', '> Running simulation...', '  Time: 0 ns | Events: 0', '  Time: 500 ns | Events: 1250', '  Time: 1000 ns | Events: 2500'].map((line, i) => (
+              <div key={i}>{line}</div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
