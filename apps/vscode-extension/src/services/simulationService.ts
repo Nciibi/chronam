@@ -111,16 +111,37 @@ export class SimulationService implements OrchestratorDelegate {
    * Run the full simulation pipeline for the active VHDL file.
    */
   async runSimulation(): Promise<void> {
-    const editor = vscode.window.activeTextEditor;
+    let editor = vscode.window.activeTextEditor;
+
+    // If no editor is focused, try to find any visible VHDL editor
     if (!editor) {
-      vscode.window.showErrorMessage('No active VHDL file.');
+      editor = vscode.window.visibleTextEditors.find(e =>
+        e.document.languageId === 'vhdl' ||
+        /\.vhd[l]?$/i.test(e.document.fileName)
+      );
+    }
+
+    if (!editor) {
+      vscode.window.showErrorMessage(
+        'Open a VHDL file (.vhd / .vhdl) and ensure the VHDL language mode is selected in VS Code.',
+        'Open File'
+      ).then(action => {
+        if (action === 'Open File') {
+          vscode.commands.executeCommand('workbench.action.quickOpen');
+        }
+      });
       return;
     }
 
     const document = editor.document;
     if (document.languageId !== 'vhdl') {
-      vscode.window.showErrorMessage('Active file is not a VHDL file.');
-      return;
+      // File has .vhd extension but language mode is wrong — try to auto-set it
+      if (/\.vhd[l]?$/i.test(document.fileName)) {
+        await vscode.languages.setTextDocumentLanguage(document, 'vhdl');
+      } else {
+        vscode.window.showErrorMessage(`File "${document.fileName}" is not a VHDL file.`);
+        return;
+      }
     }
 
     // Check simulator availability
