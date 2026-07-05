@@ -64,6 +64,7 @@ export class SimulationOrchestrator {
     this.delegate.onLogInfo(`Entity: ${entity.name}, Ports: ${entity.ports.length}`);
 
     // Phase 2: Generate testbench
+    onPhase?.('generating', `Generating testbench for ${entity.name}...`);
     this.delegate.onStatusChange({ state: 'preparing', message: 'Generating testbench...' });
     const config = this.buildSimConfig(entity);
     const tbResult = generateTestbench(entity, {
@@ -82,6 +83,7 @@ export class SimulationOrchestrator {
       workDir,
       (phase, detail) => {
         this.delegate.onLogInfo(`[${phase}] ${detail}`);
+        onPhase?.(phase, detail);
         if (phase === 'compiling') {
           this.delegate.onStatusChange({ state: 'compiling', file: detail, step: 1, totalSteps: 3 });
         } else if (phase === 'elaborating') {
@@ -100,6 +102,7 @@ export class SimulationOrchestrator {
 
     // Phase 4: Parse waveform
     if (result.waveformPath) {
+      onPhase?.('loading', 'Loading waveform data...');
       this.delegate.onStatusChange({ state: 'preparing', message: 'Loading waveform...' });
       
       const vcdContent = await this.delegate.readFile(result.waveformPath);
