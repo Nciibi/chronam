@@ -32,7 +32,8 @@ function App() {
       color: 'var(--vscode-editor-foreground, #d4d4d4)',
       fontFamily: '"Segoe UI", system-ui, sans-serif',
       overflow: 'hidden',
-      height: '100vh',
+      height: '100%',
+      width: '100%',
       display: 'flex',
       flexDirection: 'column'
     }}>
