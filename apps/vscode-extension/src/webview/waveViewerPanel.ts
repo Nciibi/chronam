@@ -100,12 +100,12 @@ export class WaveViewerPanel {
   private getHtmlContent(): string {
     const nonce = getNonce();
     
-    // Path to the React build
+    // Path to the React build (bundled inside the extension)
     const scriptUri = this.panel.webview.asWebviewUri(
-      vscode.Uri.joinPath(this.extensionUri, '..', '..', 'packages', 'wave-viewer', 'dist', 'assets', 'index.js')
+      vscode.Uri.joinPath(this.extensionUri, 'wave-viewer-dist', 'assets', 'index.js')
     );
     const styleUri = this.panel.webview.asWebviewUri(
-      vscode.Uri.joinPath(this.extensionUri, '..', '..', 'packages', 'wave-viewer', 'dist', 'assets', 'index.css')
+      vscode.Uri.joinPath(this.extensionUri, 'wave-viewer-dist', 'assets', 'index.css')
     );
 
     return /*html*/ `<!DOCTYPE html>
