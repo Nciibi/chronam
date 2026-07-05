@@ -76,6 +76,20 @@ export class GHDLAdapter implements SimulatorAdapter {
     }
   }
 
+  private normPath(p: string): string {
+    return p.replace(/\\/g, '/');
+  }
+
+  private runArgs(args: string[], workDir: string, timeoutMs: number, onStderr?: (line: string) => void) {
+    if (onStderr) onStderr(`$ ghdl ${args.join(' ')} (cwd: ${this.normPath(workDir)})`);
+    return runProcess(this.ghdlPath, args, {
+      cwd: workDir,
+      timeoutMs,
+      onStdout: onStderr,
+      onStderr,
+    });
+  }
+
   async analyze(
     sources: string[],
     workDir: string,
@@ -93,17 +107,10 @@ export class GHDLAdapter implements SimulatorAdapter {
         '-a',
         `--std=${VHDL_STD_MAP[vhdlVersion]}`,
         '--workdir=.',
-        source.replace(/\\/g, '/'),
+        this.normPath(source),
       ];
 
-      if (onStderr) onStderr(`ghdl ${args.join(' ')}`);
-
-      const result = await runProcess(this.ghdlPath, args, {
-        cwd: workDir,
-        timeoutMs: 30000,
-        onStdout: onStderr,
-        onStderr,
-      });
+      const result = await this.runArgs(args, workDir, 30000, onStderr);
 
       allStdout += result.stdout;
       allStderr += result.stderr;
@@ -133,15 +140,11 @@ export class GHDLAdapter implements SimulatorAdapter {
     const args = [
       '-e',
       `--std=${VHDL_STD_MAP[vhdlVersion]}`,
-      `--workdir=${workDir}`,
+      '--workdir=.',
       topEntity,
     ];
 
-    const result = await runProcess(this.ghdlPath, args, {
-      cwd: workDir,
-      timeoutMs: 30000,
-      onStderr,
-    });
+    const result = await this.runArgs(args, workDir, 30000, onStderr);
 
     const errors = result.exitCode !== 0
       ? this.parseErrors(result.stderr, 'elaboration')
@@ -168,27 +171,23 @@ export class GHDLAdapter implements SimulatorAdapter {
     const args = [
       '-r',
       `--std=${VHDL_STD_MAP[vhdlVersion]}`,
-      `--workdir=${workDir}`,
+      '--workdir=.',
       topEntity,
       `--stop-time=${config.durationNs}ns`,
     ];
 
     // Wave format output
     if (config.waveFormat === 'vcd') {
-      args.push(`--vcd=${waveFile}`);
+      args.push(`--vcd=${this.normPath(waveFile)}`);
     } else if (config.waveFormat === 'ghw') {
       const ghwFile = path.join(workDir, `${topEntity}.ghw`);
-      args.push(`--wave=${ghwFile}`);
+      args.push(`--wave=${this.normPath(ghwFile)}`);
     }
 
     // Extra flags
     args.push(...config.extraFlags);
 
-    const result = await runProcess(this.ghdlPath, args, {
-      cwd: workDir,
-      timeoutMs: 120000,
-      onStderr,
-    });
+    const result = await this.runArgs(args, workDir, 120000, onStderr);
 
     const wallTimeMs = Date.now() - startTime;
 
