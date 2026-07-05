@@ -37,11 +37,13 @@ export interface SimulatorAdapter {
    * @param sources - Absolute paths to VHDL source files
    * @param workDir - Working directory for intermediate files
    * @param vhdlVersion - VHDL standard version to use
+   * @param onStderr - Callback for each stderr line (for real-time terminal output)
    */
   analyze(
     sources: string[],
     workDir: string,
-    vhdlVersion?: VHDLVersion
+    vhdlVersion?: VHDLVersion,
+    onStderr?: (line: string) => void
   ): Promise<CompileResult>;
 
   /**
@@ -49,8 +51,9 @@ export interface SimulatorAdapter {
    * @param topEntity - Name of the top-level entity
    * @param workDir - Working directory
    * @param vhdlVersion - VHDL standard version (must match analyze step)
+   * @param onStderr - Callback for each stderr line
    */
-  elaborate(topEntity: string, workDir: string, vhdlVersion?: VHDLVersion): Promise<CompileResult>;
+  elaborate(topEntity: string, workDir: string, vhdlVersion?: VHDLVersion, onStderr?: (line: string) => void): Promise<CompileResult>;
 
   /**
    * Run a simulation and produce a waveform output file.
@@ -58,12 +61,14 @@ export interface SimulatorAdapter {
    * @param config - Simulation parameters
    * @param workDir - Working directory
    * @param vhdlVersion - VHDL standard version (must match analyze step)
+   * @param onStderr - Callback for each stderr line
    */
   run(
     topEntity: string,
     config: SimulationConfig,
     workDir: string,
-    vhdlVersion?: VHDLVersion
+    vhdlVersion?: VHDLVersion,
+    onStderr?: (line: string) => void
   ): Promise<SimulationResult>;
 
   /**
