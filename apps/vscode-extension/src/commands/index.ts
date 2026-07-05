@@ -1,7 +1,3 @@
-// ============================================================================
-// Chronam — Command Registration
-// ============================================================================
-
 import * as vscode from 'vscode';
 import type { SimulationService } from '../services/simulationService';
 import type { Logger } from '../utils/logger';
@@ -11,7 +7,6 @@ export function registerCommands(
   simulationService: SimulationService,
   logger: Logger
 ): void {
-  // Run Simulation
   context.subscriptions.push(
     vscode.commands.registerCommand('chronam.runSimulation', async () => {
       logger.info('Command: Run Simulation');
@@ -19,7 +14,6 @@ export function registerCommands(
     })
   );
 
-  // Generate Testbench
   context.subscriptions.push(
     vscode.commands.registerCommand('chronam.generateTestbench', async () => {
       logger.info('Command: Generate Testbench');
@@ -27,7 +21,6 @@ export function registerCommands(
     })
   );
 
-  // Open Wave Viewer
   context.subscriptions.push(
     vscode.commands.registerCommand('chronam.openWaveViewer', () => {
       logger.info('Command: Open Wave Viewer');
@@ -35,7 +28,6 @@ export function registerCommands(
     })
   );
 
-  // Detect Simulator
   context.subscriptions.push(
     vscode.commands.registerCommand('chronam.detectSimulator', async () => {
       logger.info('Command: Detect Simulator');
@@ -43,7 +35,6 @@ export function registerCommands(
     })
   );
 
-  // Stop Simulation (placeholder for future use)
   context.subscriptions.push(
     vscode.commands.registerCommand('chronam.stopSimulation', () => {
       logger.info('Command: Stop Simulation');
@@ -51,11 +42,31 @@ export function registerCommands(
     })
   );
 
-  // Show Simulation Output
   context.subscriptions.push(
     vscode.commands.registerCommand('chronam.showOutput', () => {
       logger.info('Command: Show Output');
       simulationService.showTerminal();
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('chronam.openDashboard', () => {
+      logger.info('Command: Open Dashboard');
+      vscode.commands.executeCommand('chronam.waveViewSidebar.focus');
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('chronam.openBuildPanel', () => {
+      logger.info('Command: Open Build Panel');
+      vscode.commands.executeCommand('chronam.waveViewSidebar.focus');
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('chronam.openSimulationPanel', () => {
+      logger.info('Command: Open Simulation Panel');
+      vscode.commands.executeCommand('chronam.waveViewSidebar.focus');
     })
   );
 }

@@ -30,7 +30,8 @@
     "onLanguage:vhdl",
     "workspaceContains:**/*.vhd",
     "workspaceContains:**/*.vhdl",
-    "onView:chronam.waveViewSidebar"
+    "onView:chronam.waveViewSidebar",
+    "onView:chronam-activity"
   ],
   "main": "./dist/extension.js",
   "contributes": {
