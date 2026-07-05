@@ -30,7 +30,7 @@ export class WaveViewSidebarProvider implements vscode.WebviewViewProvider {
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' ${webviewView.webview.cspSource}; script-src 'nonce-${nonce}';">
   <link rel="stylesheet" type="text/css" href="${styleUri}">
-  <title>Wave Viewer</title>
+  <title>Chronam</title>
   <style>
     html, body, #root { height:100%; margin:0; padding:0; overflow:hidden; }
     body { background:var(--vscode-editor-background,#1e1e1e); }
@@ -50,7 +50,7 @@ export class WaveViewSidebarProvider implements vscode.WebviewViewProvider {
       setTimeout(function() {
         var root = document.getElementById('root');
         if (root && root.children.length === 0) {
-          root.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;opacity:0.6;padding:32px;text-align:center"><div style="font-size:24px;margin-bottom:8px">&#9888;</div><p>Wave viewer failed to load</p><p style="font-size:12px;font-family:monospace;margin-top:4px">Check DevTools (Help &rarr; Toggle Developer Tools) for details</p></div>';
+          root.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;opacity:0.6;padding:32px;text-align:center"><div style="font-size:24px;margin-bottom:8px">&#9888;</div><p>Chronam IDE failed to load</p><p style="font-size:12px;font-family:monospace;margin-top:4px">Check DevTools (Help &rarr; Toggle Developer Tools) for details</p></div>';
         }
       }, 3000);
     </script>
@@ -68,7 +68,7 @@ export class WaveViewSidebarProvider implements vscode.WebviewViewProvider {
           vscode.commands.executeCommand('chronam.runSimulation');
           break;
         case 'webview:error':
-          console.error('[WaveViewer]', msg.message);
+          console.error('[Chronam]', msg.message);
           break;
       }
     });
