@@ -109,7 +109,7 @@ export class WaveViewerPanel {
     );
 
     return /*html*/ `<!DOCTYPE html>
-<html lang="en" style="height:100%;margin:0;padding:0;overflow:hidden;">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
@@ -117,9 +117,8 @@ export class WaveViewerPanel {
   <link rel="stylesheet" type="text/css" href="${styleUri}">
   <title>Chronam Viewer</title>
   <style>
-    html, body { height:100%; margin:0; padding:0; overflow:hidden; }
+    html, body, #root { height:100%; margin:0; padding:0; overflow:hidden; }
     body { background:var(--vscode-editor-background,#1e1e1e); }
-    #root { height:100%; display:flex; flex-direction:column; }
   </style>
 </head>
 <body>
