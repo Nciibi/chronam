@@ -66,9 +66,21 @@ export class SimulationEngine {
     testbenchEntityName: string,
     config: SimulationConfig,
     workDir: string,
-    onProgress?: SimulationProgressCallback
+    onProgress?: SimulationProgressCallback,
+    onOutput?: (stream: 'stdout' | 'stderr', line: string) => void
   ): Promise<SimulationResult> {
     const startTime = Date.now();
+
+    // Clean any stale library files from previous runs
+    try {
+      const files = await fs.readdir(workDir);
+      for (const file of files) {
+        const ext = path.extname(file).toLowerCase();
+        if (['.o', '.cf', '.vcd', '.ghw'].includes(ext)) {
+          await fs.unlink(path.join(workDir, file));
+        }
+      }
+    } catch { /* directory may not exist yet */ }
 
     // Ensure work directory exists
     await fs.mkdir(workDir, { recursive: true });
