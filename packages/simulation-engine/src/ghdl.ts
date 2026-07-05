@@ -124,9 +124,10 @@ export class GHDLAdapter implements SimulatorAdapter {
     };
   }
 
-  async elaborate(topEntity: string, workDir: string): Promise<CompileResult> {
+  async elaborate(topEntity: string, workDir: string, vhdlVersion: VHDLVersion = '2008'): Promise<CompileResult> {
     const args = [
       '-e',
+      `--std=${VHDL_STD_MAP[vhdlVersion]}`,
       `--workdir=${workDir}`,
       topEntity,
     ];
