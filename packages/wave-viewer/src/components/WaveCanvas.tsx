@@ -8,19 +8,24 @@ const SIG_H = 38;
 const PAD = 4;
 
 const C = {
-  bg: 'var(--vscode-editor-background,#1e1e1e)',
-  fg: 'var(--vscode-editor-foreground,#d4d4d4)',
-  grid: 'var(--vscode-editor-lineHighlightBorder,#2a2a2a)',
-  hdr: 'var(--vscode-sideBar-background,#252526)',
-  bdr: 'var(--vscode-panel-border,#3c3c3c)',
-  cur: '#ffcc00',
-  sb: 'var(--vscode-scrollbarSlider-background,#424242)',
-  sbH: 'var(--vscode-scrollbarSlider-hoverBackground,#4f4f4f)',
+  bg: '#0a0e0a',
+  fg: '#d4d4d4',
+  grid: '#0d1f0d',
+  gridMinor: '#081408',
+  hdr: '#0d0f0d',
+  bdr: '#1a2a1a',
+  cur: '#00ffcc',
+  curSec: '#00ffcc80',
+  sb: '#1a3a1a',
+  sbH: '#2a5a2a',
   x: '#ff5555', z: '#ffaa00', u: '#ff79c6',
-  vFill: '#264f78', vTxt: '#d4d4d4',
-  pal: ['#4fc1ff','#61e294','#ff79c6','#f1fa8c','#bd93f9','#ff6b6b','#8be9fd','#ffb86c'],
-  hi: '#888888',
-  lblBg: '#1a1a1a',
+  vFill: '#0d2a0d55', vTxt: '#c0e0c0',
+  sigHigh: '#00ff66',
+  sigLow: '#003d1a',
+  sigGlow: '#00ff6640',
+  pal: ['#00ff66','#4fc1ff','#ff79c6','#f1fa8c','#bd93f9','#ff6b6b','#8be9fd','#ffb86c'],
+  hi: '#556655',
+  lblBg: '#0a0e0a',
 };
 
 export function WaveCanvas() {
@@ -31,6 +36,9 @@ export function WaveCanvas() {
   const rafRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
   const [dimensions, setDimensions] = useState({ w: 0, h: 0 });
+  const filterRef = useRef<HTMLInputElement>(null);
+  const [filterText, setFilterText] = useState('');
+  const [hiddenSigs, setHiddenSigs] = useState<Set<string>>(new Set());
 
   const wf = useWaveStore(s => s.waveformData);
   const vp = useWaveStore(s => s.viewport);
@@ -41,7 +49,12 @@ export function WaveCanvas() {
   const setPlayCurrentTime = useWaveStore(s => s.setPlayCurrentTime);
   const togglePlay = useWaveStore(s => s.togglePlay);
 
-  const sigs = wf?.signals ?? [];
+  let sigs = wf?.signals ?? [];
+  if (filterText) {
+    const lf = filterText.toLowerCase();
+    sigs = sigs.filter(s => s.name.toLowerCase().includes(lf) || s.fullName.toLowerCase().includes(lf));
+  }
+  sigs = sigs.filter(s => !hiddenSigs.has(s.id));
   const endT = wf?.endTime ?? 100;
   const totalH = sigs.length * SIG_H;
 
@@ -49,37 +62,29 @@ export function WaveCanvas() {
   const x2t = useCallback((x: number) => vp.startTime + (x - LABEL_W) / vp.pxPerTime, [vp.startTime, vp.pxPerTime]);
 
   const getValueAt = useCallback((sig: typeof sigs[0], t: number): string => {
-    if (sig.width === 1) {
-      for (let i = sig.transitions.length - 1; i >= 0; i--) {
-        if (sig.transitions[i].time <= t) {
-          const v = sig.transitions[i].value;
-          if (v.kind === 'scalar') return v.value.toUpperCase();
-          return '?';
-        }
-      }
-      return '0';
-    }
     for (let i = sig.transitions.length - 1; i >= 0; i--) {
-      if (sig.transitions[i].time <= t) {
-        const v = sig.transitions[i].value;
-        if (v.kind === 'vector') {
-          const dec = parseInt(v.value, 2);
+      const tr = sig.transitions[i];
+      if (tr.time <= t) {
+        if (tr.value.kind === 'scalar') return tr.value.value.toUpperCase();
+        if (tr.value.kind === 'vector') {
+          if (/[^01]/i.test(tr.value.value)) return tr.value.value.toUpperCase();
+          const dec = parseInt(tr.value.value, 2);
           return '0x' + (isNaN(dec) ? '?' : dec.toString(16).toUpperCase());
         }
         return '?';
       }
     }
-    return '?';
-}, []);
+    return sig.width === 1 ? '0' : '?';
+  }, []);
 
   // Play loop
   useEffect(() => {
     if (!play.playing || !wf) { lastTimeRef.current = 0; return; }
     const step = (now: number) => {
       if (!lastTimeRef.current) lastTimeRef.current = now;
-      const dt = (now - lastTimeRef.current) / 1000; // seconds
+      const dt = (now - lastTimeRef.current) / 1000;
       lastTimeRef.current = now;
-      const tInc = dt * play.speed * (endT / 20); // complete in ~20s at 1x
+      const tInc = dt * play.speed * (endT / 20);
       setPlayCurrentTime(tInc);
       setVp(p => {
         const newStart = p.startTime + tInc;
@@ -103,7 +108,10 @@ export function WaveCanvas() {
     const dpr = window.devicePixelRatio || 1;
     const w = bx.clientWidth, h = bx.clientHeight;
     if (ca.width !== w * dpr || ca.height !== h * dpr) { ca.width = w * dpr; ca.height = h * dpr; ca.style.width = w + 'px'; ca.style.height = h + 'px'; }
-    ctx.save(); ctx.scale(dpr, dpr); ctx.clearRect(0, 0, w, h); ctx.fillStyle = C.bg; ctx.fillRect(0, 0, w, h);
+    ctx.save(); ctx.scale(dpr, dpr); ctx.clearRect(0, 0, w, h);
+
+    // Background
+    ctx.fillStyle = C.bg; ctx.fillRect(0, 0, w, h);
 
     const range = vp.endTime - vp.startTime;
     const tick = (() => {
@@ -114,10 +122,19 @@ export function WaveCanvas() {
       return (n <= 1.5 ? 1 : n <= 3.5 ? 2 : n <= 7.5 ? 5 : 10) * mag;
     })();
 
-    // Grid
+    // Minor grid (thin)
+    ctx.strokeStyle = C.gridMinor; ctx.lineWidth = 0.3;
+    const minorTick = tick / 5;
+    let t = Math.floor(vp.startTime / minorTick) * minorTick;
+    for (; t <= vp.endTime; t += minorTick) { const x = t2x(t); if (x < LABEL_W) continue; ctx.beginPath(); ctx.moveTo(x, RULER_H); ctx.lineTo(x, h); ctx.stroke(); }
+
+    // Major grid (thicker, greener)
     ctx.strokeStyle = C.grid; ctx.lineWidth = 0.5;
-    for (let t = Math.floor(vp.startTime / tick) * tick; t <= vp.endTime; t += tick) { const x = t2x(t); if (x < LABEL_W) continue; ctx.beginPath(); ctx.moveTo(x, RULER_H); ctx.lineTo(x, h); ctx.stroke(); }
-    for (let i = 0; i <= sigs.length; i++) { const y = RULER_H + i * SIG_H - vp.scrollY; if (y < RULER_H || y > h) continue; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+    for (t = Math.floor(vp.startTime / tick) * tick; t <= vp.endTime; t += tick) { const x = t2x(t); if (x < LABEL_W) continue; ctx.beginPath(); ctx.moveTo(x, RULER_H); ctx.lineTo(x, h); ctx.stroke(); }
+
+    // Horizontal grid lines (signal boundaries)
+    ctx.strokeStyle = C.grid; ctx.lineWidth = 0.4;
+    for (let i = 0; i <= sigs.length; i++) { const y = RULER_H + i * SIG_H - vp.scrollY; if (y < RULER_H || y > h) continue; ctx.beginPath(); ctx.moveTo(LABEL_W, y); ctx.lineTo(w, y); ctx.stroke(); }
 
     // Waveforms
     ctx.save(); ctx.beginPath(); ctx.rect(LABEL_W, RULER_H, w - LABEL_W, h - RULER_H); ctx.clip();
@@ -126,32 +143,57 @@ export function WaveCanvas() {
       if (y + SIG_H < RULER_H || y > h) return;
       const col = C.pal[i % C.pal.length];
       const top = y + PAD, bot = y + SIG_H - PAD, mid = (top + bot) / 2;
-      ctx.lineWidth = 2;
       if (sig.width === 1) {
-        ctx.strokeStyle = col;
+        ctx.lineWidth = 1.5;
+        ctx.lineCap = 'round';
         for (let ti = 0; ti < sig.transitions.length; ti++) {
-          const t = sig.transitions[ti], nx = sig.transitions[ti + 1];
-          const x1 = t2x(t.time), x2 = nx ? t2x(nx.time) : w;
+          const tr = sig.transitions[ti], nx = sig.transitions[ti + 1];
+          const x1 = t2x(tr.time), x2 = nx ? t2x(nx.time) : w;
           if (x2 < LABEL_W || x1 > w) continue;
-          const val = t.value.kind === 'scalar' ? t.value.value : '0';
-          const ly = (val === '1' || val === 'h') ? top : bot;
-          if (val === 'x') { ctx.strokeStyle = C.x; ctx.fillStyle = C.x + '25'; ctx.fillRect(x1, top, x2 - x1, bot - top); }
-          else if (val === 'z') ctx.strokeStyle = C.z;
-          else if (val === 'u') ctx.strokeStyle = C.u;
-          else ctx.strokeStyle = col;
-          if (ti > 0) { const pv = sig.transitions[ti - 1]; const pvy = (pv.value.kind === 'scalar' && (pv.value.value === '1' || pv.value.value === 'h')) ? top : bot; if (pvy !== ly) { ctx.beginPath(); ctx.moveTo(x1, pvy); ctx.lineTo(x1, ly); ctx.stroke(); } }
+          const val = tr.value.kind === 'scalar' ? tr.value.value : '0';
+          const isHigh = val === '1' || val === 'h';
+          const ly = isHigh ? top : bot;
+          if (val === 'x') {
+            ctx.fillStyle = C.x + '25'; ctx.fillRect(x1, top, x2 - x1, bot - top);
+            ctx.strokeStyle = C.x; ctx.beginPath(); ctx.setLineDash([2, 2]);
+            ctx.moveTo(Math.max(x1, LABEL_W), mid); ctx.lineTo(Math.min(x2, w), mid); ctx.stroke(); ctx.setLineDash([]);
+            return;
+          }
+          if (val === 'z') {
+            ctx.strokeStyle = C.z; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+            ctx.beginPath(); ctx.moveTo(Math.max(x1, LABEL_W), mid); ctx.lineTo(Math.min(x2, w), mid); ctx.stroke(); ctx.setLineDash([]);
+            ctx.lineWidth = 1.5;
+            return;
+          }
+          if (val === 'u') { ctx.strokeStyle = C.u; ctx.fillStyle = C.u + '20'; ctx.fillRect(x1, top, x2 - x1, bot - top); }
+          // Glow effect
+          ctx.shadowColor = isHigh ? C.sigGlow : 'transparent';
+          ctx.shadowBlur = isHigh ? 6 : 0;
+          ctx.strokeStyle = isHigh ? C.sigHigh : col;
+          if (ti > 0) {
+            const pv = sig.transitions[ti - 1];
+            const pvy = (pv.value.kind === 'scalar' && (pv.value.value === '1' || pv.value.value === 'h')) ? top : bot;
+            if (pvy !== ly) { ctx.beginPath(); ctx.moveTo(x1, pvy); ctx.lineTo(x1, ly); ctx.stroke(); }
+          }
           ctx.beginPath(); ctx.moveTo(Math.max(x1, LABEL_W), ly); ctx.lineTo(Math.min(x2, w), ly); ctx.stroke();
+          ctx.shadowBlur = 0;
         }
       } else {
         ctx.lineWidth = 1;
+        ctx.lineCap = 'butt';
         for (let ti = 0; ti < sig.transitions.length; ti++) {
-          const t = sig.transitions[ti], nx = sig.transitions[ti + 1];
-          const x1 = Math.max(t2x(t.time), LABEL_W), x2 = nx ? Math.min(t2x(nx.time), w) : w;
+          const tr = sig.transitions[ti], nx = sig.transitions[ti + 1];
+          const x1 = Math.max(t2x(tr.time), LABEL_W), x2 = nx ? Math.min(t2x(nx.time), w) : w;
           if (x2 - x1 < 1) continue;
           ctx.fillStyle = C.vFill; ctx.strokeStyle = col;
           const dw = Math.min(5, (x2 - x1) / 3);
           ctx.beginPath(); ctx.moveTo(x1 + dw, top); ctx.lineTo(x2 - dw, top); ctx.lineTo(x2, mid); ctx.lineTo(x2 - dw, bot); ctx.lineTo(x1 + dw, bot); ctx.lineTo(x1, mid); ctx.closePath(); ctx.fill(); ctx.stroke();
-          if (x2 - x1 > 30 && t.value.kind === 'vector') { ctx.fillStyle = C.vTxt; ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('0x' + parseInt(t.value.value, 2).toString(16).toUpperCase(), (x1 + x2) / 2, mid); }
+          if (x2 - x1 > 30 && tr.value.kind === 'vector') {
+            const dec = parseInt(tr.value.value, 2);
+            const txt = '0x' + (isNaN(dec) ? '?' : dec.toString(16).toUpperCase());
+            ctx.fillStyle = C.vTxt; ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(txt, (x1 + x2) / 2, mid);
+          }
         }
       }
     });
@@ -161,47 +203,82 @@ export function WaveCanvas() {
     ctx.fillStyle = C.lblBg; ctx.fillRect(0, RULER_H, LABEL_W, h - RULER_H);
     ctx.strokeStyle = C.bdr; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(LABEL_W, RULER_H); ctx.lineTo(LABEL_W, h); ctx.stroke();
 
-    // Signal labels with current value
+    // Signal labels
     sigs.forEach((sig, i) => {
       const y = RULER_H + i * SIG_H - vp.scrollY;
       if (y + SIG_H < RULER_H || y > h) return;
       const col = C.pal[i % C.pal.length];
       // Colored dot
       ctx.fillStyle = col; ctx.beginPath(); ctx.arc(10, y + SIG_H / 2, 4, 0, Math.PI * 2); ctx.fill();
-      // Signal full name
+      // Name
       ctx.fillStyle = C.fg; ctx.font = 'bold 12px "Cascadia Code","JetBrains Mono","IBM Plex Mono",monospace';
       ctx.fillText(sig.name, 22, y + SIG_H / 2);
       // Bit width badge
       if (sig.width > 1) { ctx.fillStyle = C.hi; ctx.font = '10px "Segoe UI",sans-serif'; ctx.textBaseline = 'bottom'; ctx.fillText('[' + sig.width + ':0]', LABEL_W - 6, y + SIG_H - 3); }
-      // Current value at cursor
-      if (play.playing && play.currentTime !== undefined) {
-        const val = getValueAt(sig, play.currentTime);
-        ctx.fillStyle = col; ctx.font = 'bold 11px monospace'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-        ctx.fillText(val, LABEL_W - 6, y + SIG_H / 2);
-      }
     });
 
     // Ruler
     ctx.fillStyle = C.hdr; ctx.fillRect(0, 0, w, RULER_H);
     ctx.strokeStyle = C.bdr; ctx.beginPath(); ctx.moveTo(0, RULER_H); ctx.lineTo(w, RULER_H); ctx.stroke();
     ctx.fillStyle = C.fg; ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center';
-    for (let t = Math.floor(vp.startTime / tick) * tick; t <= vp.endTime; t += tick) { const x = t2x(t); if (x < LABEL_W - 5 || x > w + 5) continue; ctx.strokeStyle = '#88888840'; ctx.beginPath(); ctx.moveTo(x, RULER_H - 10); ctx.lineTo(x, RULER_H - 2); ctx.stroke(); ctx.fillText(t + (wf.timescale ? ' ' + wf.timescale.unit : 'ns'), x, RULER_H - 14); }
+    for (t = Math.floor(vp.startTime / tick) * tick; t <= vp.endTime; t += tick) {
+      const x = t2x(t); if (x < LABEL_W - 5 || x > w + 5) continue;
+      ctx.strokeStyle = '#3a6a3a40'; ctx.beginPath(); ctx.moveTo(x, RULER_H - 10); ctx.lineTo(x, RULER_H - 2); ctx.stroke();
+      ctx.fillText(t + (wf.timescale ? ' ' + wf.timescale.unit : 'ns'), x, RULER_H - 14);
+    }
+    // Ruler time at cursor
+    if (cur.primary !== null) {
+      const cx = t2x(cur.primary); if (cx >= LABEL_W && cx <= w) {
+        ctx.fillStyle = C.hdr; ctx.fillRect(cx - 50, 0, 100, RULER_H);
+        ctx.fillStyle = C.cur; ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(cur.primary + ' ns', cx, RULER_H / 2);
+      }
+    }
 
-    // Cursor
-    if (cur.primary !== null) { const x = t2x(cur.primary); if (x >= LABEL_W && x <= w) { ctx.strokeStyle = C.cur; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); ctx.fillStyle = C.cur; ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center'; ctx.fillText(cur.primary + ' ns', x, 12); } }
+    // Primary cursor
+    if (cur.primary !== null) {
+      const cx = t2x(cur.primary);
+      if (cx >= LABEL_W && cx <= w) {
+        ctx.strokeStyle = C.cur; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, h); ctx.stroke();
+        // Cursor triangle
+        ctx.fillStyle = C.cur; ctx.beginPath(); ctx.moveTo(cx - 5, RULER_H); ctx.lineTo(cx + 5, RULER_H); ctx.lineTo(cx, RULER_H + 6); ctx.closePath(); ctx.fill();
+      }
+    }
+
+    // Secondary cursor
+    if (cur.secondary !== null) {
+      const sx = t2x(cur.secondary);
+      if (sx >= LABEL_W && sx <= w) {
+        ctx.strokeStyle = C.curSec; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
+        ctx.beginPath(); ctx.moveTo(sx, 0); ctx.lineTo(sx, h); ctx.stroke(); ctx.setLineDash([]);
+      }
+    }
+
+    // Delta measurement
+    if (cur.primary !== null && cur.secondary !== null) {
+      const delta = Math.abs(cur.primary - cur.secondary);
+      const x1 = t2x(cur.primary), x2 = t2x(cur.secondary);
+      if (x1 >= LABEL_W && x2 >= LABEL_W) {
+        const lx = (x1 + x2) / 2;
+        ctx.fillStyle = C.cur + 'DD'; ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+        ctx.fillText('Δ ' + delta + ' ns', lx, RULER_H - 4);
+      }
+    }
 
     // Playing indicator
     if (play.playing) {
       const px = t2x(play.currentTime);
       if (px >= LABEL_W && px <= w) {
-        ctx.strokeStyle = '#61e294'; ctx.lineWidth = 2; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, h); ctx.stroke(); ctx.setLineDash([]);
+        ctx.strokeStyle = '#00ff66'; ctx.lineWidth = 2; ctx.setLineDash([4, 4]);
+        ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, h); ctx.stroke(); ctx.setLineDash([]);
       }
     }
 
     ctx.restore();
-  }, [wf, vp, cur, play, sigs, t2x, x2t, endT, getValueAt, dimensions]);
+  }, [wf, vp, cur, play, sigs, t2x, x2t, endT, getValueAt, dimensions, filterText, hiddenSigs]);
 
-  // Resize — trigger re-render on container resize
+  // Resize
   useEffect(() => {
     const bx = boxRef.current;
     if (!bx) return;
@@ -226,7 +303,13 @@ export function WaveCanvas() {
       } else if (e.shiftKey) { const dt = e.deltaY / vp.pxPerTime; setVp(p => ({ ...p, startTime: Math.max(0, p.startTime + dt), endTime: Math.min(endT, p.endTime + dt) })); }
       else { setVp(p => ({ ...p, scrollY: Math.max(0, Math.min(totalH - bx.clientHeight, p.scrollY + e.deltaY)) })); }
     };
-    const md = (e: MouseEvent) => { if (e.offsetX > LABEL_W) { if (e.button === 0 && !e.altKey) setCur(() => ({ primary: Math.round(x2t(e.offsetX)), secondary: null })); if (e.button === 1 || (e.button === 0 && e.altKey)) { drag = true; dX = e.offsetX; dT = vp.startTime; } } };
+    const md = (e: MouseEvent) => {
+      if (e.offsetX > LABEL_W) {
+        if (e.button === 0 && !e.altKey) setCur(() => ({ primary: Math.round(x2t(e.offsetX)), secondary: null }));
+        if (e.button === 0 && e.altKey) setCur(p => ({ ...p, secondary: Math.round(x2t(e.offsetX)) }));
+        if (e.button === 1 || (e.button === 0 && e.shiftKey)) { drag = true; dX = e.offsetX; dT = vp.startTime; }
+      }
+    };
     const mm = (e: MouseEvent) => { if (drag) { const dt = (e.offsetX - dX) / vp.pxPerTime; setVp(p => ({ ...p, startTime: Math.max(0, dT - dt), endTime: Math.min(endT, dT - dt + (bx.clientWidth - LABEL_W) / p.pxPerTime) })); } };
     const mu = () => { drag = false; };
     bx.addEventListener('wheel', ww, { passive: false }); bx.addEventListener('mousedown', md); bx.addEventListener('mousemove', mm); window.addEventListener('mouseup', mu);
@@ -271,16 +354,77 @@ export function WaveCanvas() {
     window.addEventListener('mousemove', mv); window.addEventListener('mouseup', mu);
   };
 
+  const toggleHide = (id: string) => {
+    setHiddenSigs(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const clearFilter = () => {
+    setFilterText('');
+    filterRef.current?.focus();
+  };
+
   return (
     <div style={{ width: '100%', height: '100%', flex: 1, display: 'flex', flexDirection: 'column', background: C.bg, position: 'relative' }}>
+      {/* Filter bar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', background: C.hdr, borderBottom: '1px solid ' + C.bdr, flexShrink: 0, height: 32 }}>
+        <span style={{ color: C.hi, fontSize: 11 }}>🔍</span>
+        <input
+          ref={filterRef}
+          value={filterText}
+          onChange={e => setFilterText(e.target.value)}
+          placeholder="Filter signals..."
+          style={{
+            flex: 1, background: '#111511', border: '1px solid ' + C.bdr, color: C.fg,
+            fontFamily: '"Cascadia Code","JetBrains Mono","IBM Plex Mono",monospace',
+            fontSize: 11, padding: '2px 6px', outline: 'none', borderRadius: 2,
+          }}
+        />
+        {filterText && (
+          <button onClick={clearFilter} style={{ background: 'none', border: 'none', color: C.hi, cursor: 'pointer', fontFamily: 'monospace', fontSize: 11, lineHeight: '16px' }} title="Clear filter">✕</button>
+        )}
+        <span style={{ color: C.hi, fontSize: 10, fontFamily: 'monospace' }}>{sigs.length} sigs</span>
+      </div>
+      {/* Canvas area */}
       <div ref={boxRef} style={{ flex: 1, overflow: 'hidden', cursor: 'crosshair', position: 'relative', marginRight: SCROLL_W }}>
         <canvas ref={canvasRef} style={{ position: 'absolute', top: 0, left: 0 }} />
+        {/* Signal visibility toggles overlay */}
+        <div style={{ position: 'absolute', top: RULER_H, left: 0, width: LABEL_W, pointerEvents: 'none' }}>
+          {(wf?.signals ?? []).map((sig) => {
+            const idx = sigs.indexOf(sig);
+            if (idx === -1) return null;
+            const y = RULER_H + idx * SIG_H - vp.scrollY;
+            if (y + SIG_H < RULER_H || y > dimensions.h) return null;
+            const hidden = hiddenSigs.has(sig.id);
+            return (
+              <button
+                key={sig.id}
+                onClick={() => toggleHide(sig.id)}
+                title={hidden ? 'Show signal' : 'Hide signal'}
+                style={{
+                  position: 'absolute', top: y + (SIG_H - 16) / 2, right: 4, width: 16, height: 16,
+                  background: 'none', border: '1px solid ' + C.bdr, borderRadius: 2,
+                  cursor: 'pointer', color: hidden ? C.hi : C.pal[idx % C.pal.length],
+                  fontSize: 9, lineHeight: '14px', textAlign: 'center', pointerEvents: 'auto',
+                  opacity: hidden ? 0.4 : 1, padding: 0,
+                }}
+              >
+                {hidden ? '◌' : '●'}
+              </button>
+            );
+          })}
+        </div>
       </div>
+      {/* Horizontal scrollbar */}
       <div onClick={onHTrack} style={{ height: SCROLL_W, background: C.hdr, borderTop: '1px solid ' + C.bdr, position: 'relative', cursor: 'pointer', marginRight: SCROLL_W }}>
         <div ref={hThumbRef} onMouseDown={onHDrag} style={{ position: 'absolute', top: 2, height: SCROLL_W - 4, borderRadius: 4, background: C.sb, cursor: 'pointer' }}
           onMouseEnter={e => (e.target as HTMLElement).style.background = C.sbH} onMouseLeave={e => (e.target as HTMLElement).style.background = C.sb} />
       </div>
-      <div onClick={onVTrack} style={{ position: 'absolute', right: 0, top: 0, bottom: SCROLL_W, width: SCROLL_W, background: C.hdr, borderLeft: '1px solid ' + C.bdr, cursor: 'pointer' }}>
+      {/* Vertical scrollbar */}
+      <div onClick={onVTrack} style={{ position: 'absolute', right: 0, top: 32, bottom: SCROLL_W, width: SCROLL_W, background: C.hdr, borderLeft: '1px solid ' + C.bdr, cursor: 'pointer' }}>
         <div ref={vThumbRef} onMouseDown={onVDrag} style={{ position: 'absolute', left: 2, width: SCROLL_W - 4, borderRadius: 4, background: C.sb, cursor: 'pointer' }}
           onMouseEnter={e => (e.target as HTMLElement).style.background = C.sbH} onMouseLeave={e => (e.target as HTMLElement).style.background = C.sb} />
       </div>
