@@ -8,6 +8,7 @@
 
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as crypto from 'crypto';
 import { SimulationOrchestrator } from '@chronam/core';
 import type { OrchestratorDelegate } from '@chronam/core';
 import type {
@@ -16,6 +17,8 @@ import type {
   WaveformData,
 } from '@chronam/shared-types';
 import { WaveViewerPanel } from '../webview/waveViewerPanel';
+import { WaveViewSidebarProvider } from '../providers/waveViewSidebar';
+import { SimulationTerminal } from './simulationTerminal';
 import type { Logger } from '../utils/logger';
 
 type StatusListener = (status: SimulationStatus) => void;
@@ -28,11 +31,21 @@ export class SimulationService implements OrchestratorDelegate {
   private statusListeners: StatusListener[] = [];
   private currentStatus: SimulationStatus = { state: 'idle' };
   private lastWaveformData: WaveformData | null = null;
+  private terminal: SimulationTerminal;
+  private sidebarProvider?: WaveViewSidebarProvider;
+
+  // Parse cache: keyed by file path, stores content hash + parsed entities
+  private parseCache = new Map<string, { hash: string; entities: Entity[] }>();
 
   constructor(context: vscode.ExtensionContext, logger: Logger) {
     this.context = context;
     this.logger = logger;
     this.orchestrator = new SimulationOrchestrator(this);
+    this.terminal = new SimulationTerminal();
+  }
+
+  setSidebarProvider(provider: WaveViewSidebarProvider): void {
+    this.sidebarProvider = provider;
   }
 
   setDiagnostics(diagnostics: vscode.DiagnosticCollection): void {
