@@ -74,9 +74,9 @@ const s: Record<string, React.CSSProperties> = {
   },
 };
 
-function Toggle({ value }: { value: boolean }) {
+function Toggle({ value, title }: { value: boolean; title?: string }) {
   return (
-    <button style={{ ...s.toggle, background: value ? '#0e639c' : '#3c3c3c' }}>
+    <button title={title || `Toggle ${value ? 'off' : 'on'}`} style={{ ...s.toggle, background: value ? '#0e639c' : '#3c3c3c' }}>
       <div style={{ ...s.toggleKnob, left: value ? 20 : 2 }} />
     </button>
   );
