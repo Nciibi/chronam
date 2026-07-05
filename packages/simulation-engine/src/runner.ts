@@ -60,7 +60,7 @@ export function runProcess(
       child = spawn(command, args, {
         cwd,
         env: env ? { ...process.env, ...env } : process.env,
-        shell: process.platform === 'win32',
+        shell: false,
         stdio: ['pipe', 'pipe', 'pipe'],
       });
     } catch (err) {
