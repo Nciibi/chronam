@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { useWaveStore } from '../store/useWaveStore';
 
 const LABEL_W = 200;
