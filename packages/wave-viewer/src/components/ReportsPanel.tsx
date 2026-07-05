@@ -1,5 +1,3 @@
-import { useChronamStore } from '../store/useChronamStore';
-
 const s: Record<string, React.CSSProperties> = {
   panel: {
     padding: 8,
@@ -32,16 +30,7 @@ const s: Record<string, React.CSSProperties> = {
   info: { flex: 1 },
   title: { fontSize: 12, color: 'var(--vscode-editor-foreground,#d4d4d4)' },
   meta: { fontSize: 10, color: 'var(--vscode-editor-foreground,#d4d4d4)', opacity: 0.4, marginTop: 2 },
-  badge: (color: string) => ({
-    fontSize: 10,
-    padding: '2px 8px',
-    borderRadius: 2,
-    background: color + '22',
-    color: color,
-    border: '1px solid ' + color,
-    fontWeight: 700,
-    fontFamily: 'inherit' as const,
-  }),
+
 };
 
 const reportList = [

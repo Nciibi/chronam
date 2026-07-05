@@ -1,5 +1,3 @@
-import { useChronamStore } from '../store/useChronamStore';
-
 const s: Record<string, React.CSSProperties> = {
   panel: {
     padding: 8,
