@@ -30,6 +30,7 @@ export function WaveCanvas() {
   const vThumbRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
+  const [dimensions, setDimensions] = useState({ w: 0, h: 0 });
 
   const wf = useWaveStore(s => s.waveformData);
   const vp = useWaveStore(s => s.viewport);
