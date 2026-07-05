@@ -23,6 +23,19 @@ input:focus, select:focus { outline:1px solid var(--vscode-focusBorder,#0e639c);
   to { opacity:1; }
 }
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .panel-fade-in {
   animation: fadeIn 0.12s ease-out;
+}
+
+.pulse {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity:0.4; }
+  50% { opacity:1; }
 }
