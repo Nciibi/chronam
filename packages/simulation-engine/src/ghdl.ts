@@ -92,9 +92,11 @@ export class GHDLAdapter implements SimulatorAdapter {
       const args = [
         '-a',
         `--std=${VHDL_STD_MAP[vhdlVersion]}`,
-        `--workdir=${workDir}`,
-        source,
+        '--workdir=.',
+        source.replace(/\\/g, '/'),
       ];
+
+      if (onStderr) onStderr(`ghdl ${args.join(' ')}`);
 
       const result = await runProcess(this.ghdlPath, args, {
         cwd: workDir,
