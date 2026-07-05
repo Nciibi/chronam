@@ -330,6 +330,7 @@ function buildWaveformData(state: ParseState, options?: { filterTestbenchSignals
 
     signals.push({
       id: idCode,
+      name: varDef.name,
       fullName,
       hierarchyPath: [...varDef.scopePath],
       width: varDef.width,

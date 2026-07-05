@@ -284,7 +284,7 @@ export class WaveformRenderer {
 
       // Signal name
       ctx.fillStyle = colors.foreground;
-      const displayName = signal.fullName;
+      const displayName = signal.name;
       ctx.fillText(
         truncateText(ctx, displayName, config.labelWidth - 24),
         18,

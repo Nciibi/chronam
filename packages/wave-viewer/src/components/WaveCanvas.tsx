@@ -170,7 +170,7 @@ export function WaveCanvas() {
       ctx.fillStyle = col; ctx.beginPath(); ctx.arc(10, y + SIG_H / 2, 4, 0, Math.PI * 2); ctx.fill();
       // Signal full name
       ctx.fillStyle = C.fg; ctx.font = 'bold 12px "Cascadia Code","JetBrains Mono","IBM Plex Mono",monospace';
-      ctx.fillText(sig.fullName, 22, y + SIG_H / 2);
+      ctx.fillText(sig.name, 22, y + SIG_H / 2);
       // Bit width badge
       if (sig.width > 1) { ctx.fillStyle = C.hi; ctx.font = '10px "Segoe UI",sans-serif'; ctx.textBaseline = 'bottom'; ctx.fillText('[' + sig.width + ':0]', LABEL_W - 6, y + SIG_H - 3); }
       // Current value at cursor
