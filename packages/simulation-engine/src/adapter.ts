@@ -48,19 +48,22 @@ export interface SimulatorAdapter {
    * Elaborate the top-level design entity.
    * @param topEntity - Name of the top-level entity
    * @param workDir - Working directory
+   * @param vhdlVersion - VHDL standard version (must match analyze step)
    */
-  elaborate(topEntity: string, workDir: string): Promise<CompileResult>;
+  elaborate(topEntity: string, workDir: string, vhdlVersion?: VHDLVersion): Promise<CompileResult>;
 
   /**
    * Run a simulation and produce a waveform output file.
    * @param topEntity - Name of the top-level entity to simulate
    * @param config - Simulation parameters
    * @param workDir - Working directory
+   * @param vhdlVersion - VHDL standard version (must match analyze step)
    */
   run(
     topEntity: string,
     config: SimulationConfig,
-    workDir: string
+    workDir: string,
+    vhdlVersion?: VHDLVersion
   ): Promise<SimulationResult>;
 
   /**
