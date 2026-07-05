@@ -130,12 +130,62 @@ No waveform renderer changes in this phase. The canvas renderer remains as-is.
 Existing:
 - `F6` — Run Simulation (VHDL editor focus)
 
-New (via commands):
+New:
+- `Ctrl+Tab` / `Ctrl+Shift+Tab` — Navigate between Chronam panels
+- `↑` / `↓` — Navigate panels when sidebar nav is focused
+
+New (via commands, bindable in VS Code):
 - `chronam.openDashboard`
 - `chronam.openBuildPanel`
 - `chronam.openSimulationPanel`
 
-These are programmatic commands that can be bound in VS Code keyboard shortcuts.
+---
+
+## Polish Phase Implemented
+
+The following polish items from the initial report have been implemented:
+
+### UI Polish Components Created
+
+| Component | Lines | Purpose |
+|---|---|---|
+| `CollapsibleSection` | 49 | Expandable/collapsible section headers with caret indicator |
+| `EmptyState` | 43 | Reusable empty state with icon, text, and subtext |
+| `LoadingOverlay` | 55 | Full-area loading overlay with spinner and label |
+
+### Panel Switching Animation
+- CSS `fadeIn` keyframe animation (120ms ease-out) applied to panel container on every panel switch via React key change
+- `spin` keyframe added for LoadingOverlay spinner
+- `pulse` keyframe for status indicators
+- All animations are minimal fade-only (per prompt.md: "Fade only. Instant response. Never flashy.")
+
+### Keyboard Navigation
+- `Ctrl+Tab` / `Ctrl+Shift+Tab` cycles through all 11 panels
+- Sidebar nav supports `↑` / `↓` arrow key navigation
+- Sidebar nav has proper ARIA roles (`role="tablist"`, `role="tab"`, `aria-selected`)
+- Panel container receives focus on switch for keyboard accessibility
+
+### Collapsible Sections
+- Dashboard uses 5 collapsible sections (Project, Build, Simulation, Timing, Actions)
+- Timing panel uses 2 collapsible sections (Timing Summary, Clock Domains)
+- Persistent collapse state with hover effects on headers
+
+### Empty States
+- All 11 panels now show meaningful empty states when no data is available
+- EmptyState component with large icon, primary text, and descriptive subtext
+- Panels with empty states: Build, Simulation, Waveforms, Timing, Explorer, Constraints, Reports, AI Assistant
+
+### Loading States
+- LoadingOverlay with CSS spinner animation
+- Implemented in AI Assistant panel during message processing
+- Ready for use in Build and Simulation panels
+
+### Tooltip Improvements
+- All interactive buttons/items now have `title` attributes
+- Toggle switches in Settings have descriptive tooltips
+- File explorer items show name and type in tooltip
+- Constraint items show type and target in tooltip
+- Report items show name and status in tooltip
 
 ---
 
