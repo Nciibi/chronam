@@ -199,7 +199,7 @@ export function WaveCanvas() {
     }
 
     ctx.restore();
-  }, [wf, vp, cur, play, sigs, t2x, x2t, endT, getValueAt]);
+  }, [wf, vp, cur, play, sigs, t2x, x2t, endT, getValueAt, dimensions]);
 
   // Resize
   useEffect(() => {
