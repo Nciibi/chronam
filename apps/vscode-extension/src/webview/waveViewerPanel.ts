@@ -124,6 +124,16 @@ export class WaveViewerPanel {
 <body>
   <div id="root"></div>
   <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
+  <script nonce="${nonce}">
+    window.addEventListener('error', function(e) {
+      const vscode = acquireVsCodeApi();
+      vscode.postMessage({ type: '__error', message: e.message, filename: e.filename, lineno: e.lineno, colno: e.colno, error: String(e.error) });
+    });
+    window.addEventListener('unhandledrejection', function(e) {
+      const vscode = acquireVsCodeApi();
+      vscode.postMessage({ type: '__error', message: 'Unhandled rejection: ' + e.reason });
+    });
+  </script>
 </body>
 </html>`;
   }
