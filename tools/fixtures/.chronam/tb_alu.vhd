@@ -12,7 +12,7 @@ end entity tb_alu;
 architecture sim of tb_alu is
 
     signal clk : std_logic := '0';
-    signal a : std_logic_vector(7 downto 0 := '0';
+    signal a : std_logic_vector(7 downto 0) := '0';
 
     constant CLK_PERIOD : time := 10 ns;
     constant CLK_HALF   : time := 5 ns;
