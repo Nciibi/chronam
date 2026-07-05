@@ -66,8 +66,7 @@ export class SimulationEngine {
     testbenchEntityName: string,
     config: SimulationConfig,
     workDir: string,
-    onProgress?: SimulationProgressCallback,
-    onOutput?: (stream: 'stdout' | 'stderr', line: string) => void
+    onProgress?: SimulationProgressCallback
   ): Promise<SimulationResult> {
     const startTime = Date.now();
 
