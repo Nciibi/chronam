@@ -13,15 +13,25 @@ export interface CursorState {
   secondary: number | null;
 }
 
+export interface PlayState {
+  playing: boolean;
+  speed: number;
+  currentTime: number;
+}
+
 interface WaveStore {
   waveformData: WaveformData | null;
   viewport: ViewportState;
   cursor: CursorState;
+  play: PlayState;
 
   setWaveformData: (data: WaveformData) => void;
   setViewport: (updater: (prev: ViewportState) => ViewportState) => void;
   setCursor: (updater: (prev: CursorState) => CursorState) => void;
   fitAll: (canvasWidth: number, labelWidth: number) => void;
+  togglePlay: () => void;
+  setPlaySpeed: (speed: number) => void;
+  setPlayCurrentTime: (t: number) => void;
 }
 
 export const useWaveStore = create<WaveStore>((set) => ({
@@ -36,6 +46,11 @@ export const useWaveStore = create<WaveStore>((set) => ({
     primary: null,
     secondary: null,
   },
+  play: {
+    playing: false,
+    speed: 1,
+    currentTime: 0,
+  },
 
   setWaveformData: (data) => set({
     waveformData: data,
@@ -45,6 +60,8 @@ export const useWaveStore = create<WaveStore>((set) => ({
       pxPerTime: 1,
       scrollY: 0,
     },
+    cursor: { primary: null, secondary: null },
+    play: { playing: false, speed: 1, currentTime: 0 },
   }),
 
   setViewport: (updater) => set((state) => ({
@@ -65,6 +82,19 @@ export const useWaveStore = create<WaveStore>((set) => ({
         pxPerTime: (canvasWidth - labelWidth) / endTime,
         scrollY: 0,
       },
+      play: { ...state.play, currentTime: 0 },
     };
   }),
+
+  togglePlay: () => set((state) => ({
+    play: { ...state.play, playing: !state.play.playing },
+  })),
+
+  setPlaySpeed: (speed) => set((state) => ({
+    play: { ...state.play, speed },
+  })),
+
+  setPlayCurrentTime: (t) => set((state) => ({
+    play: { ...state.play, currentTime: t },
+  })),
 }));
