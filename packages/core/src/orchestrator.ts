@@ -1,3 +1,4 @@
+import * as path from 'path';
 import { parseVHDLFile, extractFirstEntity } from '@chronam/vhdl-parser';
 import { generateTestbench } from '@chronam/testbench-generator';
 import { SimulationEngine } from '@chronam/simulation-engine';
