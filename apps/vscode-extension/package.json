@@ -40,7 +40,7 @@
         {
           "id": "chronam-activity",
           "title": "Chronam",
-          "icon": "$(circuit-board)"
+          "icon": "assets/logo.png"
         }
       ]
     },
