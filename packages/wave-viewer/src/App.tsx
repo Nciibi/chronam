@@ -11,10 +11,9 @@ import { HardwarePanel } from './components/HardwarePanel';
 import { AiAssistantPanel } from './components/AiAssistantPanel';
 import { ReportsPanel } from './components/ReportsPanel';
 import { SettingsPanel } from './components/SettingsPanel';
-import { useChronamStore } from './store/useChronamStore';
+import { useChronamStore, type PanelId } from './store/useChronamStore';
 import { useWaveStore } from './store/useWaveStore';
 import { postMessage } from './vscode';
-import type { PanelId } from './store/useChronamStore';
 
 const panelComponents: Record<PanelId, React.FC> = {
   dashboard: DashboardPanel,
