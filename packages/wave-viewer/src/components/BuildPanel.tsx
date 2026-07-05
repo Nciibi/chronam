@@ -1,5 +1,6 @@
 import { useChronamStore } from '../store/useChronamStore';
 import { postMessage } from '../vscode';
+import { EmptyState } from './EmptyState';
 
 const s: Record<string, React.CSSProperties> = {
   panel: {
@@ -36,7 +37,7 @@ const s: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     fontSize: 11,
     fontFamily: 'inherit',
-    transition: 'background .15s',
+    transition: 'background .12s',
   },
   btnActive: {
     background: 'var(--vscode-button-background,#0e639c)',
@@ -76,13 +77,6 @@ const s: Record<string, React.CSSProperties> = {
   },
 };
 
-const mockOutput = [
-  '> ghdl -a --std=08 counter.vhdl',
-  '> ghdl -e --std=08 counter',
-  '> ghdl -r --std=08 counter --vcd=.chronam/counter.vcd',
-  '  Simulation complete: 8 signals (1000ns simulated)',
-];
-
 export function BuildPanel() {
   const buildState = useChronamStore((s) => s.buildState);
 
@@ -93,25 +87,32 @@ export function BuildPanel() {
         <button
           style={buildState.status === 'running' ? s.btnActive : s.btn}
           onClick={() => postMessage({ type: 'simulation:run', config: {} as any })}
+          title="Build current project"
         >
           {buildState.status === 'running' ? '⏳ Building...' : '▶ Build'}
         </button>
-        <button style={s.btn} onClick={() => postMessage({ type: 'simulation:run', config: {} as any })}>
+        <button style={s.btn} title="Rebuild from scratch" onClick={() => postMessage({ type: 'simulation:run', config: {} as any })}>
           ↻ Rebuild
         </button>
-        <button style={s.btn}>■ Stop</button>
-        <button style={s.btn}>✕ Clear</button>
+        <button style={s.btn} title="Stop build">■ Stop</button>
+        <button style={s.btn} title="Clear output">✕ Clear</button>
       </div>
-      <div style={s.statRow}>
-        <span style={s.stat}>Errors: <span style={{ ...s.statVal, color: buildState.errors > 0 ? '#f44747' : '#4ec9b0' }}>{buildState.errors}</span></span>
-        <span style={s.stat}>Warnings: <span style={{ ...s.statVal, color: buildState.warnings > 0 ? '#cca700' : '#4ec9b0' }}>{buildState.warnings}</span></span>
-        <span style={s.stat}>Status: <span style={{ ...s.statVal, textTransform: 'uppercase' }}>{buildState.status}</span></span>
-      </div>
-      <div style={s.output}>
-        {mockOutput.map((line, i) => (
-          <div key={i}>{line}</div>
-        ))}
-      </div>
+      {buildState.status === 'idle' ? (
+        <EmptyState icon="⚙" text="No builds yet" sub="Click Build to compile your VHDL design" />
+      ) : (
+        <>
+          <div style={s.statRow}>
+            <span style={s.stat}>Errors: <span style={{ ...s.statVal, color: buildState.errors > 0 ? '#f44747' : '#4ec9b0' }}>{buildState.errors}</span></span>
+            <span style={s.stat}>Warnings: <span style={{ ...s.statVal, color: buildState.warnings > 0 ? '#cca700' : '#4ec9b0' }}>{buildState.warnings}</span></span>
+            <span style={s.stat}>Status: <span style={{ ...s.statVal, textTransform: 'uppercase' }}>{buildState.status}</span></span>
+          </div>
+          <div style={s.output}>
+            {['> ghdl -a --std=08 counter.vhdl', '> ghdl -e --std=08 counter', '> ghdl -r --std=08 counter --vcd=.chronam/counter.vcd', '  Simulation complete: 8 signals (1000ns simulated)'].map((line, i) => (
+              <div key={i}>{line}</div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
