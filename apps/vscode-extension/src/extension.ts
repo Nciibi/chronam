@@ -8,6 +8,7 @@
 import * as vscode from 'vscode';
 import { SimulationService } from './services/simulationService';
 import { WaveViewerPanel } from './webview/waveViewerPanel';
+import { WaveViewSidebarProvider } from './providers/waveViewSidebar';
 import { registerCommands } from './commands/index';
 import { VHDLCodeLensProvider } from './providers/codeLensProvider';
 import { Logger } from './utils/logger';
@@ -20,6 +21,17 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Initialize core services
   const simulationService = new SimulationService(context, logger);
+
+  // Register sidebar wave viewer provider
+  const sidebarProvider = new WaveViewSidebarProvider();
+  simulationService.setSidebarProvider(sidebarProvider);
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(
+      WaveViewSidebarProvider.viewType,
+      sidebarProvider,
+      { webviewOptions: { retainContextWhenHidden: true } }
+    )
+  );
 
   // Register commands
   registerCommands(context, simulationService, logger);
@@ -56,6 +68,9 @@ export function activate(context: vscode.ExtensionContext) {
         statusBarItem.text = '$(circuit-board) Chronam';
         statusBarItem.tooltip = 'Click to run simulation';
         break;
+      case 'preparing':
+        statusBarItem.text = '$(loading~spin) Preparing...';
+        break;
       case 'compiling':
         statusBarItem.text = '$(loading~spin) Compiling...';
         break;
@@ -83,9 +98,14 @@ export function activate(context: vscode.ExtensionContext) {
   // Live Preview: Auto-run simulation on file save if the wave viewer is open
   context.subscriptions.push(
     vscode.workspace.onDidSaveTextDocument(async (document) => {
-      if (document.languageId === 'vhdl' && WaveViewerPanel.isOpen) {
-        logger.info('Live Preview: Re-running simulation on save');
-        await simulationService.runSimulation();
+      if (document.languageId === 'vhdl') {
+        const viewerOpen = WaveViewerPanel.isOpen;
+        const config = vscode.workspace.getConfiguration('chronam');
+        const livePreview = config.get<boolean>('general.livePreview', true);
+        if (viewerOpen || livePreview) {
+          logger.info('Live Preview: Re-running simulation on save');
+          await simulationService.runSimulation();
+        }
       }
     })
   );

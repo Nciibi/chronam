@@ -29,7 +29,8 @@
   "activationEvents": [
     "onLanguage:vhdl",
     "workspaceContains:**/*.vhd",
-    "workspaceContains:**/*.vhdl"
+    "workspaceContains:**/*.vhdl",
+    "onView:chronam.waveViewSidebar"
   ],
   "main": "./dist/extension.js",
   "contributes": {
