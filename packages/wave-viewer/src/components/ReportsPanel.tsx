@@ -75,7 +75,9 @@ export function ReportsPanel() {
             <div style={s.title}>{r.title}</div>
             <div style={s.meta}>{r.date}</div>
           </div>
-          <span style={s.badge(statusColors[r.status])}>{statusIcons[r.status]} {r.status.toUpperCase()}</span>
+          <span style={{ fontSize:10, padding:'2px 8px', borderRadius:2, background:statusColors[r.status]+'22', color:statusColors[r.status], border:'1px solid '+statusColors[r.status], fontWeight:700, fontFamily:'inherit' }}>
+            {statusIcons[r.status]} {r.status.toUpperCase()}
+          </span>
         </div>
       ))}
     </div>
