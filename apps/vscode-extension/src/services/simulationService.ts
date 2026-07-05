@@ -31,6 +31,7 @@ export class SimulationService implements OrchestratorDelegate {
   private lastWaveformData: WaveformData | null = null;
   private terminal: SimulationTerminal;
   private sidebarProvider?: WaveViewSidebarProvider;
+  private userClockPeriodNs: number | null = null;
 
   constructor(context: vscode.ExtensionContext, logger: Logger) {
     this.context = context;
