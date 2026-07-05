@@ -173,6 +173,9 @@ export class SimulationService implements OrchestratorDelegate {
             }
             this.terminal.appendLine(detail);
             progress.report({ message: detail });
+          },
+          (line) => {
+            this.terminal.appendOutput(line);
           }
         );
 
