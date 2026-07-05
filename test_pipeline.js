@@ -2,7 +2,7 @@ const path = require('path');
 const fs = require('fs');
 
 async function main() {
-  const { SimulationOrchestrator } = require('./packages/core/dist/core.js');
+  const { SimulationOrchestrator } = require('./packages/core/dist/index.js');
   const delegate = {
     onStatusChange: (s) => console.log('STATUS:', JSON.stringify(s)),
     onLogInfo: (m, ...args) => console.log('INFO:', m, ...args),
