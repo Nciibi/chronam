@@ -12,14 +12,14 @@ export class WaveViewSidebarProvider implements vscode.WebviewViewProvider {
 
     webviewView.webview.options = {
       enableScripts: true,
-      localResourceRoots: [webviewView.webview.cspSource].map(s => vscode.Uri.parse(s)) as any,
+      localResourceRoots: [vscode.Uri.joinPath(vscode.Uri.file(__dirname), '..')],
     };
 
     const scriptUri = webviewView.webview.asWebviewUri(
-      vscode.Uri.joinPath(vscode.Uri.file(__dirname), '..', '..', '..', '..', 'packages', 'wave-viewer', 'dist', 'assets', 'index.js')
+      vscode.Uri.joinPath(vscode.Uri.file(__dirname), '..', 'wave-viewer-dist', 'assets', 'index.js')
     );
     const styleUri = webviewView.webview.asWebviewUri(
-      vscode.Uri.joinPath(vscode.Uri.file(__dirname), '..', '..', '..', '..', 'packages', 'wave-viewer', 'dist', 'assets', 'index.css')
+      vscode.Uri.joinPath(vscode.Uri.file(__dirname), '..', 'wave-viewer-dist', 'assets', 'index.css')
     );
 
     const nonce = getNonce();
