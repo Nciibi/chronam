@@ -53,7 +53,14 @@ export const useWaveStore = create<WaveStore>((set) => ({
   },
 
   setWaveformData: (data) => set({
-    waveformData: data,
+    waveformData: {
+      ...data,
+      signals: (() => {
+        const sigs = data.signals;
+        const hasDeep = sigs.some(s => s.hierarchyPath.length > 1);
+        return hasDeep ? sigs.filter(s => s.hierarchyPath.length > 1) : sigs;
+      })(),
+    },
     viewport: {
       startTime: 0,
       endTime: data.endTime || 100,
