@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import { SidebarNav } from './components/SidebarNav';
 import { DashboardPanel } from './components/DashboardPanel';
 import { ExplorerPanel } from './components/ExplorerPanel';
@@ -14,6 +14,11 @@ import { SettingsPanel } from './components/SettingsPanel';
 import { useChronamStore, type PanelId } from './store/useChronamStore';
 import { useWaveStore } from './store/useWaveStore';
 import { postMessage } from './vscode';
+
+const panelOrder: PanelId[] = [
+  'dashboard', 'explorer', 'build', 'simulation', 'waveforms',
+  'timing', 'constraints', 'hardware', 'ai-assistant', 'reports', 'settings',
+];
 
 const panelComponents: Record<PanelId, React.FC> = {
   dashboard: DashboardPanel,
@@ -33,6 +38,14 @@ function App() {
   const activePanel = useChronamStore((s) => s.activePanel);
   const setWaveformData = useWaveStore((s) => s.setWaveformData);
   const setActivePanel = useChronamStore((s) => s.setActivePanel);
+  const [animKey, setAnimKey] = useState(0);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  const navigatePanel = useCallback((dir: -1 | 1) => {
+    const idx = panelOrder.indexOf(activePanel);
+    const next = (idx + dir + panelOrder.length) % panelOrder.length;
+    setActivePanel(panelOrder[next]);
+  }, [activePanel, setActivePanel]);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -64,16 +77,34 @@ function App() {
             });
           }
           break;
+        case 'panel:navigate':
+          if (msg.direction === 'next') navigatePanel(1);
+          else if (msg.direction === 'prev') navigatePanel(-1);
+          break;
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 'Tab') {
+        e.preventDefault();
+        navigatePanel(e.shiftKey ? -1 : 1);
       }
     };
 
     window.addEventListener('message', handleMessage);
+    window.addEventListener('keydown', handleKeyDown);
     postMessage({ type: 'ready' });
 
     return () => {
       window.removeEventListener('message', handleMessage);
+      window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [setWaveformData, setActivePanel]);
+  }, [setWaveformData, setActivePanel, navigatePanel]);
+
+  useEffect(() => {
+    setAnimKey((k) => k + 1);
+    panelRef.current?.focus();
+  }, [activePanel]);
 
   const PanelComponent = panelComponents[activePanel];
 
@@ -87,14 +118,21 @@ function App() {
       width: '100%',
       display: 'flex',
     }}>
-      <SidebarNav />
-      <div style={{
-        flex: 1,
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        minWidth: 0,
-      }}>
+      <SidebarNav onNavigate={navigatePanel} />
+      <div
+        ref={panelRef}
+        tabIndex={-1}
+        key={animKey}
+        className="panel-fade-in"
+        style={{
+          flex: 1,
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          minWidth: 0,
+          outline: 'none',
+        }}
+      >
         <PanelComponent />
       </div>
     </div>
