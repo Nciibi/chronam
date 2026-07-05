@@ -156,7 +156,7 @@ export class SimulationService implements OrchestratorDelegate {
     }, async (progress, token) => {
       token.onCancellationRequested(() => {
         this.terminal.appendLine('Simulation cancelled by user.');
-        this.setStatus({ state: 'idle' });
+        this.onStatusChange({ state: 'idle' });
       });
 
       try {
@@ -219,7 +219,7 @@ export class SimulationService implements OrchestratorDelegate {
         const message = err instanceof Error ? err.message : String(err);
         this.terminal.fail(message);
         this.logger.error('Simulation error:', message);
-        this.setStatus({
+        this.onStatusChange({
           state: 'failed',
           errors: [{
             phase: 'runtime',
