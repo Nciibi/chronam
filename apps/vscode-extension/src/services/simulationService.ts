@@ -96,7 +96,7 @@ export class SimulationService implements OrchestratorDelegate {
     const config = vscode.workspace.getConfiguration('chronam');
     return {
       durationNs: config.get<number>('simulator.defaultDurationNs', 1000),
-      clockPeriodNs: config.get<number>('testbench.defaultClockPeriodNs', 10),
+      clockPeriodNs: this.userClockPeriodNs ?? config.get<number>('testbench.defaultClockPeriodNs', 10),
       ghdlPath: config.get<string>('simulator.ghdlPath', '') || undefined
     };
   }
