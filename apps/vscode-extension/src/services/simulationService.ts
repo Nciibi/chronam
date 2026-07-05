@@ -143,6 +143,8 @@ export class SimulationService implements OrchestratorDelegate {
     }
 
     this.logger.info(`Using ${simInfo.name} v${simInfo.version}`);
+    this.terminal.begin();
+    this.terminal.appendLine(`Simulator: ${simInfo.name} v${simInfo.version}`);
 
     // Clear previous diagnostics
     this.diagnostics?.clear();
@@ -151,52 +153,96 @@ export class SimulationService implements OrchestratorDelegate {
     const fileContent = document.getText();
     const workDir = path.join(path.dirname(filePath), '.chronam');
 
-    try {
-      const result = await this.orchestrator.runSimulation(
-        fileContent,
-        filePath,
-        workDir
-      );
-
-      if (result.error) {
-        vscode.window.showErrorMessage(
-          `Simulation failed: ${result.error}`,
-          'Show Output'
-        ).then((action) => {
-          if (action === 'Show Output') this.logger.show();
-        });
-        return;
-      }
-
-      if (result.waveformData) {
-        this.lastWaveformData = result.waveformData;
-        const autoOpen = vscode.workspace.getConfiguration('chronam')
-          .get<boolean>('general.autoOpenWaveViewer', true);
-
-        if (autoOpen) {
-          WaveViewerPanel.createOrShow(this.context, result.waveformData, result.entity, result.config);
-        }
-        
-        vscode.window.showInformationMessage(
-          `Simulation complete: ${result.waveformData.signals.length} signals`
-        );
-      } else {
-        vscode.window.showWarningMessage('Simulation completed but no waveform file was generated.');
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger.error('Simulation error:', message);
-      this.setStatus({
-        state: 'failed',
-        errors: [{
-          phase: 'runtime',
-          raw: message,
-          translated: message,
-          severity: 'error',
-        }],
+    // Show progress & terminal
+    vscode.window.withProgress({
+      location: vscode.ProgressLocation.Notification,
+      title: 'Chronam Simulation',
+      cancellable: true,
+    }, async (progress, token) => {
+      token.onCancellationRequested(() => {
+        this.terminal.appendLine('Simulation cancelled by user.');
+        this.setStatus({ state: 'idle' });
       });
-      vscode.window.showErrorMessage(`Simulation error: ${message}`);
-    }
+
+      try {
+        const result = await this.orchestrator.runSimulation(
+          fileContent,
+          filePath,
+          workDir,
+          (phase, detail) => {
+            if (phase === 'compiling') {
+              this.terminal.nextPhase();
+            } else if (phase === 'elaborating') {
+              this.terminal.nextPhase();
+            } else if (phase === 'running') {
+              this.terminal.nextPhase();
+            }
+            this.terminal.appendLine(detail);
+            progress.report({ message: detail });
+          }
+        );
+
+        if (result.error) {
+          this.terminal.fail(result.error);
+          vscode.window.showErrorMessage(
+            `Simulation failed: ${result.error}`,
+            'Show Output'
+          ).then((action) => {
+            if (action === 'Show Output') this.terminal.show();
+          });
+          return;
+        }
+
+        if (result.waveformData) {
+          this.lastWaveformData = result.waveformData;
+          this.terminal.complete(result.waveformData.signals.length);
+
+          const autoOpen = vscode.workspace.getConfiguration('chronam')
+            .get<boolean>('general.autoOpenWaveViewer', true);
+
+          if (autoOpen) {
+            const openIn = vscode.workspace.getConfiguration('chronam')
+              .get<string>('general.waveViewerLocation', 'editor');
+
+            if (openIn === 'sidebar') {
+              this.sidebarProvider?.loadWaveform(result.waveformData, result.entity, result.config);
+              this.sidebarProvider?.reveal();
+            } else {
+              WaveViewerPanel.createOrShow(this.context, result.waveformData, result.entity, result.config);
+            }
+          }
+
+          const elapsed = result.config ? `${result.config.durationNs}ns simulated` : '';
+          vscode.window.showInformationMessage(
+            `Simulation complete: ${result.waveformData.signals.length} signals${elapsed ? ` (${elapsed})` : ''}`
+          );
+        } else {
+          this.terminal.complete();
+          vscode.window.showWarningMessage('Simulation completed but no waveform file was generated.');
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        this.terminal.fail(message);
+        this.logger.error('Simulation error:', message);
+        this.setStatus({
+          state: 'failed',
+          errors: [{
+            phase: 'runtime',
+            raw: message,
+            translated: message,
+            severity: 'error',
+          }],
+        });
+        vscode.window.showErrorMessage(`Simulation error: ${message}`);
+      }
+    });
+  }
+
+  /**
+   * Show the simulation output channel.
+   */
+  showTerminal(): void {
+    this.terminal.show();
   }
 
   /**
