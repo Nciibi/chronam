@@ -1,59 +1,103 @@
 import { useEffect } from 'react';
-import { WaveCanvas } from './components/WaveCanvas';
-import { Toolbar } from './components/Toolbar';
+import { SidebarNav } from './components/SidebarNav';
+import { DashboardPanel } from './components/DashboardPanel';
+import { ExplorerPanel } from './components/ExplorerPanel';
+import { BuildPanel } from './components/BuildPanel';
+import { SimulationPanel } from './components/SimulationPanel';
+import { WaveformsPanel } from './components/WaveformsPanel';
+import { TimingPanel } from './components/TimingPanel';
+import { ConstraintsPanel } from './components/ConstraintsPanel';
+import { HardwarePanel } from './components/HardwarePanel';
+import { AiAssistantPanel } from './components/AiAssistantPanel';
+import { ReportsPanel } from './components/ReportsPanel';
+import { SettingsPanel } from './components/SettingsPanel';
+import { useChronamStore } from './store/useChronamStore';
 import { useWaveStore } from './store/useWaveStore';
 import { postMessage } from './vscode';
+import type { PanelId } from './store/useChronamStore';
+
+const panelComponents: Record<PanelId, React.FC> = {
+  dashboard: DashboardPanel,
+  explorer: ExplorerPanel,
+  build: BuildPanel,
+  simulation: SimulationPanel,
+  waveforms: WaveformsPanel,
+  timing: TimingPanel,
+  constraints: ConstraintsPanel,
+  hardware: HardwarePanel,
+  'ai-assistant': AiAssistantPanel,
+  reports: ReportsPanel,
+  settings: SettingsPanel,
+};
 
 function App() {
-  const waveformData = useWaveStore((state) => state.waveformData);
-  const setWaveformData = useWaveStore((state) => state.setWaveformData);
+  const activePanel = useChronamStore((s) => s.activePanel);
+  const setWaveformData = useWaveStore((s) => s.setWaveformData);
+  const setActivePanel = useChronamStore((s) => s.setActivePanel);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       const msg = event.data;
-      if (msg.type === 'waveform:load') {
-        setWaveformData(msg.data);
+      switch (msg.type) {
+        case 'waveform:load':
+          setWaveformData(msg.data);
+          setActivePanel('waveforms');
+          break;
+        case 'simulation:status':
+          useChronamStore.getState().setSimulationState({
+            status: msg.status.state,
+            currentTime: msg.status.currentTime || '0 ns',
+            events: msg.status.events || 0,
+          });
+          break;
+        case 'simulation:config':
+          useChronamStore.getState().setProjectInfo({
+            name: msg.config?.projectName || '',
+            topEntity: msg.config?.topEntity || '',
+          });
+          break;
+        case 'entity:detected':
+          if (msg.entities?.length > 0) {
+            useChronamStore.getState().setProjectInfo({
+              name: msg.entities[0].name,
+              topEntity: msg.entities[0].name,
+              files: msg.entities.length,
+            });
+          }
+          break;
       }
     };
 
     window.addEventListener('message', handleMessage);
-    
-    // Notify VS Code that webview is ready
     postMessage({ type: 'ready' });
 
     return () => {
       window.removeEventListener('message', handleMessage);
     };
-  }, [setWaveformData]);
+  }, [setWaveformData, setActivePanel]);
+
+  const PanelComponent = panelComponents[activePanel];
 
   return (
     <div style={{
       background: 'var(--vscode-editor-background, #1e1e1e)',
       color: 'var(--vscode-editor-foreground, #d4d4d4)',
-      fontFamily: '"Segoe UI", system-ui, sans-serif',
+      fontFamily: '"Cascadia Code","JetBrains Mono","IBM Plex Mono","Segoe UI",system-ui,sans-serif',
       overflow: 'hidden',
       height: '100%',
       width: '100%',
       display: 'flex',
-      flexDirection: 'column'
     }}>
-      <Toolbar />
-      {waveformData ? (
-        <WaveCanvas />
-      ) : (
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flex: 1,
-          opacity: 0.5,
-          gap: '12px'
-        }}>
-          <div style={{ fontSize: '48px' }}>〰️</div>
-          <p style={{ fontSize: '14px' }}>Run a simulation to view waveforms</p>
-        </div>
-      )}
+      <SidebarNav />
+      <div style={{
+        flex: 1,
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        minWidth: 0,
+      }}>
+        <PanelComponent />
+      </div>
     </div>
   );
 }
