@@ -85,8 +85,8 @@ export class WaveViewerPanel {
       case 'simulation:run':
         vscode.commands.executeCommand('chronam.runSimulation');
         break;
-      case '__error':
-        console.error('[WebView Error]', message.message, `at ${message.filename}:${message.lineno}:${message.colno}`);
+      case 'webview:error':
+        console.error('[WaveViewer]', message.message);
         break;
     }
   }
@@ -129,12 +129,10 @@ export class WaveViewerPanel {
   <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
   <script nonce="${nonce}">
     window.addEventListener('error', function(e) {
-      const vscode = acquireVsCodeApi();
-      vscode.postMessage({ type: '__error', message: e.message, filename: e.filename, lineno: e.lineno, colno: e.colno, error: String(e.error) });
+      acquireVsCodeApi().postMessage({ type: 'webview:error', message: 'error: ' + e.message + ' @ ' + (e.filename||'') + ':' + e.lineno + ':' + e.colno });
     });
     window.addEventListener('unhandledrejection', function(e) {
-      const vscode = acquireVsCodeApi();
-      vscode.postMessage({ type: '__error', message: 'Unhandled rejection: ' + e.reason });
+      acquireVsCodeApi().postMessage({ type: 'webview:error', message: 'rejection: ' + e.reason });
     });
   </script>
 </body>
