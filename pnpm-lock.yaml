@@ -49,6 +49,9 @@ importers:
         specifier: workspace:*
         version: link:../../packages/vhdl-parser
     devDependencies:
+      '@types/node':
+        specifier: ^25.0.0
+        version: 25.7.0
       '@types/vscode':
         specifier: ^1.85.0
         version: 1.118.0
