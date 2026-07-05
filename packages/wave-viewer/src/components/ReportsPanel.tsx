@@ -1,3 +1,5 @@
+import { EmptyState } from './EmptyState';
+
 const s: Record<string, React.CSSProperties> = {
   panel: {
     padding: 8,
@@ -30,7 +32,6 @@ const s: Record<string, React.CSSProperties> = {
   info: { flex: 1 },
   title: { fontSize: 12, color: 'var(--vscode-editor-foreground,#d4d4d4)' },
   meta: { fontSize: 10, color: 'var(--vscode-editor-foreground,#d4d4d4)', opacity: 0.4, marginTop: 2 },
-
 };
 
 const reportList = [
@@ -65,21 +66,28 @@ export function ReportsPanel() {
   return (
     <div style={s.panel}>
       <div style={s.header}>Reports</div>
-      {reportList.map((r, i) => (
-        <div key={i} style={s.reportItem}
-          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--vscode-list-hoverBackground,#2a2d2e)'}
-          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-        >
-          <span style={s.icon}>{typeIcons[r.type]}</span>
-          <div style={s.info}>
-            <div style={s.title}>{r.title}</div>
-            <div style={s.meta}>{r.date}</div>
-          </div>
-          <span style={{ fontSize:10, padding:'2px 8px', borderRadius:2, background:statusColors[r.status]+'22', color:statusColors[r.status], border:'1px solid '+statusColors[r.status], fontWeight:700, fontFamily:'inherit' }}>
-            {statusIcons[r.status]} {r.status.toUpperCase()}
-          </span>
-        </div>
-      ))}
+      {reportList.length === 0 ? (
+        <EmptyState icon="▤" text="No reports generated" sub="Run builds and simulations to generate reports" />
+      ) : (
+        <>
+          {reportList.map((r, i) => (
+            <div key={i} style={s.reportItem}
+              title={`${r.title} (${r.status})`}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--vscode-list-hoverBackground,#2a2d2e)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+            >
+              <span style={s.icon}>{typeIcons[r.type]}</span>
+              <div style={s.info}>
+                <div style={s.title}>{r.title}</div>
+                <div style={s.meta}>{r.date}</div>
+              </div>
+              <span style={{ fontSize:10, padding:'2px 8px', borderRadius:2, background:statusColors[r.status]+'22', color:statusColors[r.status], border:'1px solid '+statusColors[r.status], fontWeight:700, fontFamily:'inherit' }}>
+                {statusIcons[r.status]} {r.status.toUpperCase()}
+              </span>
+            </div>
+          ))}
+        </>
+      )}
     </div>
   );
 }
