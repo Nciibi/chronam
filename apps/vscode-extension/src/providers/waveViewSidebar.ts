@@ -32,7 +32,8 @@ export class WaveViewSidebarProvider implements vscode.WebviewViewProvider {
   <link rel="stylesheet" type="text/css" href="${styleUri}">
   <title>Wave Viewer</title>
   <style>
-    body { margin: 0; padding: 0; overflow: hidden; }
+    html, body, #root { height:100%; margin:0; padding:0; overflow:hidden; }
+    body { background:var(--vscode-editor-background,#1e1e1e); }
   </style>
 </head>
 <body>
