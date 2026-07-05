@@ -1,14 +1,14 @@
 import { create } from 'zustand';
 import type { WaveformData } from '@chronam/shared-types';
 
-interface ViewportState {
+export interface ViewportState {
   startTime: number;
   endTime: number;
   pxPerTime: number;
   scrollY: number;
 }
 
-interface CursorState {
+export interface CursorState {
   primary: number | null;
   secondary: number | null;
 }
@@ -17,8 +17,7 @@ interface WaveStore {
   waveformData: WaveformData | null;
   viewport: ViewportState;
   cursor: CursorState;
-  
-  // Actions
+
   setWaveformData: (data: WaveformData) => void;
   setViewport: (updater: (prev: ViewportState) => ViewportState) => void;
   setCursor: (updater: (prev: CursorState) => CursorState) => void;
@@ -38,22 +37,22 @@ export const useWaveStore = create<WaveStore>((set) => ({
     secondary: null,
   },
 
-  setWaveformData: (data) => set({ 
+  setWaveformData: (data) => set({
     waveformData: data,
     viewport: {
       startTime: 0,
       endTime: data.endTime || 100,
       pxPerTime: 1,
       scrollY: 0,
-    }
+    },
   }),
-  
-  setViewport: (updater) => set((state) => ({ 
-    viewport: updater(state.viewport) 
+
+  setViewport: (updater) => set((state) => ({
+    viewport: updater(state.viewport),
   })),
 
-  setCursor: (updater) => set((state) => ({ 
-    cursor: updater(state.cursor) 
+  setCursor: (updater) => set((state) => ({
+    cursor: updater(state.cursor),
   })),
 
   fitAll: (canvasWidth, labelWidth) => set((state) => {
@@ -65,7 +64,7 @@ export const useWaveStore = create<WaveStore>((set) => ({
         endTime,
         pxPerTime: (canvasWidth - labelWidth) / endTime,
         scrollY: 0,
-      }
+      },
     };
-  })
+  }),
 }));
