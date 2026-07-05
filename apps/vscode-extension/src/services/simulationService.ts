@@ -199,7 +199,7 @@ export class SimulationService implements OrchestratorDelegate {
               .get<string>('general.waveViewerLocation', 'editor');
 
             if (openIn === 'sidebar') {
-              this.sidebarProvider?.loadWaveform(result.waveformData, result.entity, result.config);
+              this.sidebarProvider?.loadWaveform(result.waveformData);
               this.sidebarProvider?.reveal();
             } else {
               WaveViewerPanel.createOrShow(this.context, result.waveformData, result.entity, result.config);
