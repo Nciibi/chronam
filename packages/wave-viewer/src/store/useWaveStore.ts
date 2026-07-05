@@ -58,7 +58,9 @@ export const useWaveStore = create<WaveStore>((set) => ({
       signals: (() => {
         const sigs = data.signals;
         const hasDeep = sigs.some(s => s.hierarchyPath.length > 1);
-        return hasDeep ? sigs.filter(s => s.hierarchyPath.length > 1) : sigs;
+        if (hasDeep) return sigs.filter(s => s.hierarchyPath.length > 1);
+        const tbPat = /^sim_done$/i;
+        return sigs.filter(s => !tbPat.test(s.name));
       })(),
     },
     viewport: {
