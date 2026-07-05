@@ -166,15 +166,10 @@ export function WaveCanvas() {
       if (y + SIG_H < RULER_H || y > h) return;
       const col = C.pal[i % C.pal.length];
       // Colored dot
-      ctx.fillStyle = col; ctx.beginPath(); ctx.arc(14, y + SIG_H / 2, 5, 0, Math.PI * 2); ctx.fill();
-      // Hierarchy path
-      const path = sig.hierarchyPath?.length ? sig.hierarchyPath.join('.') + '.' : '';
-      ctx.fillStyle = C.hi; ctx.font = '11px "Segoe UI",sans-serif'; ctx.textBaseline = 'middle';
-      const pw = ctx.measureText(path).width;
-      ctx.fillText(path, 28, y + SIG_H / 2);
-      // Signal name
-      ctx.fillStyle = C.fg; ctx.font = 'bold 13px "Segoe UI",sans-serif';
-      ctx.fillText(sig.name, 28 + pw, y + SIG_H / 2);
+      ctx.fillStyle = col; ctx.beginPath(); ctx.arc(10, y + SIG_H / 2, 4, 0, Math.PI * 2); ctx.fill();
+      // Signal full name
+      ctx.fillStyle = C.fg; ctx.font = 'bold 12px "Cascadia Code","JetBrains Mono","IBM Plex Mono",monospace';
+      ctx.fillText(sig.fullName, 22, y + SIG_H / 2);
       // Bit width badge
       if (sig.width > 1) { ctx.fillStyle = C.hi; ctx.font = '10px "Segoe UI",sans-serif'; ctx.textBaseline = 'bottom'; ctx.fillText('[' + sig.width + ':0]', LABEL_W - 6, y + SIG_H - 3); }
       // Current value at cursor
