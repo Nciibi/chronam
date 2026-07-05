@@ -37,7 +37,8 @@ export class SimulationOrchestrator {
     fileContent: string,
     filePath: string,
     workDir: string,
-    onPhase?: (phase: string, detail: string) => void
+    onPhase?: (phase: string, detail: string) => void,
+    onGHDLOutput?: (line: string) => void
   ): Promise<{ waveformData?: WaveformData; entity?: Entity; config?: SimulationConfig; error?: any }> {
     
     // Phase 1: Parse VHDL
@@ -90,6 +91,10 @@ export class SimulationOrchestrator {
         } else {
           this.delegate.onStatusChange({ state: 'running' });
         }
+      },
+      (line) => {
+        this.delegate.onLogInfo(`GHDL: ${line}`);
+        onGHDLOutput?.(line);
       }
     );
 

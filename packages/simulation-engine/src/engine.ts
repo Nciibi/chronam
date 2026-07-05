@@ -66,7 +66,8 @@ export class SimulationEngine {
     testbenchEntityName: string,
     config: SimulationConfig,
     workDir: string,
-    onProgress?: SimulationProgressCallback
+    onProgress?: SimulationProgressCallback,
+    onStderr?: (line: string) => void
   ): Promise<SimulationResult> {
     const startTime = Date.now();
 
@@ -95,7 +96,8 @@ export class SimulationEngine {
     const analyzeDesign = await this.adapter.analyze(
       [designSource],
       workDir,
-      vhdlVersion
+      vhdlVersion,
+      onStderr
     );
 
     if (!analyzeDesign.success) {
@@ -113,7 +115,8 @@ export class SimulationEngine {
     const analyzeTb = await this.adapter.analyze(
       [tbFilePath],
       workDir,
-      vhdlVersion
+      vhdlVersion,
+      onStderr
     );
 
     if (!analyzeTb.success) {
@@ -128,7 +131,7 @@ export class SimulationEngine {
 
     // Phase 3: Elaborate
     onProgress?.('elaborating', testbenchEntityName);
-    const elaborateResult = await this.adapter.elaborate(testbenchEntityName, workDir, vhdlVersion);
+    const elaborateResult = await this.adapter.elaborate(testbenchEntityName, workDir, vhdlVersion, onStderr);
 
     if (!elaborateResult.success) {
       return {
@@ -142,7 +145,7 @@ export class SimulationEngine {
 
     // Phase 4: Run simulation
     onProgress?.('running', `Simulating ${testbenchEntityName}`);
-    const simResult = await this.adapter.run(testbenchEntityName, config, workDir, vhdlVersion);
+    const simResult = await this.adapter.run(testbenchEntityName, config, workDir, vhdlVersion, onStderr);
 
     return simResult;
   }
