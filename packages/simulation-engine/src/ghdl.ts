@@ -152,13 +152,15 @@ export class GHDLAdapter implements SimulatorAdapter {
   async run(
     topEntity: string,
     config: SimulationConfig,
-    workDir: string
+    workDir: string,
+    vhdlVersion: VHDLVersion = '2008'
   ): Promise<SimulationResult> {
     const startTime = Date.now();
     const waveFile = path.join(workDir, `${topEntity}.vcd`);
 
     const args = [
       '-r',
+      `--std=${VHDL_STD_MAP[vhdlVersion]}`,
       `--workdir=${workDir}`,
       topEntity,
       `--stop-time=${config.durationNs}ns`,
