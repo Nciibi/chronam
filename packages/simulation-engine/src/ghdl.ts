@@ -99,6 +99,7 @@ export class GHDLAdapter implements SimulatorAdapter {
       const result = await runProcess(this.ghdlPath, args, {
         cwd: workDir,
         timeoutMs: 30000,
+        onStdout: onStderr,
         onStderr,
       });
 
