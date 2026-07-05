@@ -31,8 +31,8 @@ export interface SignalTransition {
 export interface WaveformSignal {
   /** Unique signal identifier (from VCD, e.g., "!") */
   id: string;
-  /** Short signal name (e.g., "clk") */
-  name: string;
+  /** Full signal name with full hierarchical path (e.g., "tb_counter.uut.q") */
+  fullName: string;
   /** Full hierarchical path (e.g., ["tb_counter", "uut", "clk"]) */
   hierarchyPath: string[];
   /** Bit width of the signal */

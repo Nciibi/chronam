@@ -319,9 +319,14 @@ function buildWaveformData(state: ParseState): WaveformData {
   for (const [idCode, varDef] of state.variables) {
     const transitions = state.transitions.get(idCode) ?? [];
 
+    // Build full signal name: scope.path.signal_name
+    const fullName = varDef.scopePath.length > 0
+      ? varDef.scopePath.join('.') + '.' + varDef.name
+      : varDef.name;
+
     signals.push({
       id: idCode,
-      name: varDef.name,
+      fullName,
       hierarchyPath: [...varDef.scopePath, varDef.name],
       width: varDef.width,
       transitions,
