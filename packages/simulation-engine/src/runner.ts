@@ -57,6 +57,7 @@ export function runProcess(
     let killed = false;
 
     try {
+      console.log(`[DEBUG] RUNNING: ${command} ${args.join(' ')} (cwd: ${cwd})`);
       child = spawn(command, args, {
         cwd,
         env: env ? { ...process.env, ...env } : process.env,
