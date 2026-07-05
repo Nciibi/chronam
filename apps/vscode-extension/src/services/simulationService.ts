@@ -284,42 +284,4 @@ export class SimulationService implements OrchestratorDelegate {
 
 
 
-  private reportErrors(
-    errors: Array<{ translated: string; location?: { file: string; startLine: number; startColumn: number; endLine: number; endColumn: number }; severity: 'error' | 'warning' }>,
-    fallbackUri: vscode.Uri
-  ): void {
-    if (!this.diagnostics) return;
-
-    const diagMap = new Map<string, vscode.Diagnostic[]>();
-
-    for (const err of errors) {
-      const uri = err.location?.file
-        ? vscode.Uri.file(err.location.file)
-        : fallbackUri;
-
-      const range = err.location
-        ? new vscode.Range(
-            Math.max(0, err.location.startLine - 1),
-            err.location.startColumn,
-            Math.max(0, err.location.endLine - 1),
-            err.location.endColumn || 1000
-          )
-        : new vscode.Range(0, 0, 0, 0);
-
-      const severity = err.severity === 'error'
-        ? vscode.DiagnosticSeverity.Error
-        : vscode.DiagnosticSeverity.Warning;
-
-      const diag = new vscode.Diagnostic(range, err.translated, severity);
-      diag.source = 'Chronam';
-
-      const key = uri.toString();
-      if (!diagMap.has(key)) diagMap.set(key, []);
-      diagMap.get(key)!.push(diag);
-    }
-
-    for (const [uriStr, diags] of diagMap) {
-      this.diagnostics.set(vscode.Uri.parse(uriStr), diags);
-    }
-  }
 }

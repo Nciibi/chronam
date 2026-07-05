@@ -20,8 +20,8 @@ export class WaveViewerPanel {
   public static createOrShow(
     context: vscode.ExtensionContext,
     waveformData?: WaveformData,
-    entity?: Entity,
-    config?: SimulationConfig
+    _entity?: Entity,
+    _config?: SimulationConfig
   ): WaveViewerPanel {
     if (WaveViewerPanel.instance) {
       WaveViewerPanel.instance.panel.reveal(vscode.ViewColumn.Beside);
