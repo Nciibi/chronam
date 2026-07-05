@@ -126,11 +126,11 @@ export function SettingsPanel() {
       <div style={{ ...s.header, marginTop: 16 }}>General</div>
       <div style={s.row}>
         <div><div style={s.label}>Auto-open Wave Viewer</div><div style={s.desc}>Open waveform after simulation</div></div>
-        <Toggle value={true} />
+        <Toggle value={true} title="Toggle auto-open wave viewer" />
       </div>
       <div style={s.row}>
         <div><div style={s.label}>Live Preview</div><div style={s.desc}>Auto-re-run on file save</div></div>
-        <Toggle value={true} />
+        <Toggle value={true} title="Toggle live preview on save" />
       </div>
 
       <div style={{ ...s.header, marginTop: 16 }}>Information</div>
