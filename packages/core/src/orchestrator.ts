@@ -1,4 +1,3 @@
-import * as path from 'path';
 import { parseVHDLFile, extractFirstEntity } from '@chronam/vhdl-parser';
 import { generateTestbench } from '@chronam/testbench-generator';
 import { SimulationEngine } from '@chronam/simulation-engine';
@@ -44,7 +43,7 @@ export class SimulationOrchestrator {
     // Phase 1: Parse VHDL
     this.delegate.onStatusChange({ state: 'preparing', message: 'Parsing VHDL...' });
     this.delegate.onLogInfo('Parsing VHDL file:', filePath);
-    onPhase?.('parsing', `Parsing ${path.basename(filePath)}`);
+    onPhase?.('parsing', `Parsing ${filePath.split(/[/\\]/).pop()}`);
 
     const parsedFile = parseVHDLFile(fileContent, filePath);
 
