@@ -79,7 +79,8 @@ export class GHDLAdapter implements SimulatorAdapter {
   async analyze(
     sources: string[],
     workDir: string,
-    vhdlVersion: VHDLVersion = '2008'
+    vhdlVersion: VHDLVersion = '2008',
+    onStderr?: (line: string) => void
   ): Promise<CompileResult> {
     await fs.mkdir(workDir, { recursive: true });
 
@@ -98,6 +99,7 @@ export class GHDLAdapter implements SimulatorAdapter {
       const result = await runProcess(this.ghdlPath, args, {
         cwd: workDir,
         timeoutMs: 30000,
+        onStderr,
       });
 
       allStdout += result.stdout;
@@ -124,7 +126,7 @@ export class GHDLAdapter implements SimulatorAdapter {
     };
   }
 
-  async elaborate(topEntity: string, workDir: string, vhdlVersion: VHDLVersion = '2008'): Promise<CompileResult> {
+  async elaborate(topEntity: string, workDir: string, vhdlVersion: VHDLVersion = '2008', onStderr?: (line: string) => void): Promise<CompileResult> {
     const args = [
       '-e',
       `--std=${VHDL_STD_MAP[vhdlVersion]}`,
@@ -135,6 +137,7 @@ export class GHDLAdapter implements SimulatorAdapter {
     const result = await runProcess(this.ghdlPath, args, {
       cwd: workDir,
       timeoutMs: 30000,
+      onStderr,
     });
 
     const errors = result.exitCode !== 0
@@ -153,7 +156,8 @@ export class GHDLAdapter implements SimulatorAdapter {
     topEntity: string,
     config: SimulationConfig,
     workDir: string,
-    vhdlVersion: VHDLVersion = '2008'
+    vhdlVersion: VHDLVersion = '2008',
+    onStderr?: (line: string) => void
   ): Promise<SimulationResult> {
     const startTime = Date.now();
     const waveFile = path.join(workDir, `${topEntity}.vcd`);
@@ -180,6 +184,7 @@ export class GHDLAdapter implements SimulatorAdapter {
     const result = await runProcess(this.ghdlPath, args, {
       cwd: workDir,
       timeoutMs: 120000,
+      onStderr,
     });
 
     const wallTimeMs = Date.now() - startTime;
