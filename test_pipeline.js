@@ -1,8 +1,11 @@
 const path = require('path');
 const fs = require('fs');
 
+// Load the engine and orchestrator directly from source (already compiled)
+const distDir = path.resolve(__dirname, 'packages/core/dist');
+const { SimulationOrchestrator } = require(path.join(distDir, 'index.js'));
+
 async function main() {
-  const { SimulationOrchestrator } = require('./packages/core/dist/index.js');
   const delegate = {
     onStatusChange: (s) => console.log('STATUS:', JSON.stringify(s)),
     onLogInfo: (m, ...args) => console.log('INFO:', m, ...args),
@@ -13,8 +16,7 @@ async function main() {
   };
 
   const orch = new SimulationOrchestrator(delegate);
-  const baseDir = path.dirname(process.argv[1]);
-  const filePath = path.resolve(baseDir, 'tools/fixtures/counter.vhdl');
+  const filePath = path.resolve(__dirname, 'tools/fixtures/counter.vhdl');
   const fileContent = await fs.promises.readFile(filePath, 'utf-8');
   const workDir = path.resolve(__dirname, 'tools/fixtures/.chronam');
 
@@ -28,7 +30,8 @@ async function main() {
 
   const result = await orch.runSimulation(
     fileContent, filePath, workDir,
-    (phase, detail) => console.log('[' + phase + '] ' + detail)
+    (phase, detail) => console.log('[' + phase + '] ' + detail),
+    (line) => console.log('  GHDL:', line)
   );
 
   if (result.error) {
