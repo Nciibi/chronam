@@ -304,6 +304,7 @@ export function WaveCanvas() {
       else { setVp(p => ({ ...p, scrollY: Math.max(0, Math.min(totalH - bx.clientHeight, p.scrollY + e.deltaY)) })); }
     };
     const md = (e: MouseEvent) => {
+      if ((e.target as HTMLElement).closest('button')) return;
       if (e.offsetX > LABEL_W) {
         if (e.button === 0 && !e.altKey) setCur(() => ({ primary: Math.round(x2t(e.offsetX)), secondary: null }));
         if (e.button === 0 && e.altKey) setCur(p => ({ ...p, secondary: Math.round(x2t(e.offsetX)) }));
