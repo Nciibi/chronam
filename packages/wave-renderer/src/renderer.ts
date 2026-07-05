@@ -361,7 +361,7 @@ export class WaveformRenderer {
       const val = t.value.value;
 
       // Choose color
-      if (val === 'x' || val === 'x') {
+      if (val === 'x') {
         ctx.strokeStyle = colors.signalX;
         ctx.fillStyle = colors.signalX + '20';
       } else if (val === 'z') {
