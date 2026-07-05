@@ -345,9 +345,9 @@ function buildWaveformData(state: ParseState, options?: { filterTestbenchSignals
       // Hierarchy-based: remove signals at depth 1 (e.g., tb_counter.clk)
       signals = signals.filter(s => s.hierarchyPath.length > 1);
     } else {
-      // Flat VCD fallback: remove signals clearly not from user's RTL
-      const tbPatterns = ['sim_done', 'sim_end', 'done', 'sim_finished'];
-      signals = signals.filter(s => !tbPatterns.includes(s.name.toLowerCase()));
+      // Flat VCD fallback: remove testbench helper signals
+      const tbPat = /^sim_done$/i;
+      signals = signals.filter(s => !tbPat.test(s.name));
     }
   }
 
