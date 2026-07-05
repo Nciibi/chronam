@@ -73,18 +73,18 @@ describe('VCD Parser', () => {
     const data = parseVCD(SAMPLE_VCD);
     expect(data.signals.length).toBe(3);
 
-    const clk = data.signals.find(s => s.name === 'clk');
+    const clk = data.signals.find(s => s.fullName === 'tb_counter.clk');
     expect(clk).toBeDefined();
     expect(clk!.width).toBe(1);
 
-    const q = data.signals.find(s => s.name === 'q');
+    const q = data.signals.find(s => s.fullName === 'tb_counter.uut.q');
     expect(q).toBeDefined();
     expect(q!.width).toBe(4);
   });
 
   it('should parse signal hierarchy', () => {
     const data = parseVCD(SAMPLE_VCD);
-    const q = data.signals.find(s => s.name === 'q');
+    const q = data.signals.find(s => s.fullName === 'tb_counter.uut.q');
     expect(q!.hierarchyPath).toEqual(['tb_counter', 'uut']);
     expect(q!.fullName).toBe('tb_counter.uut.q');
   });
