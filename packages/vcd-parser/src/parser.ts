@@ -327,7 +327,7 @@ function buildWaveformData(state: ParseState): WaveformData {
     signals.push({
       id: idCode,
       fullName,
-      hierarchyPath: [...varDef.scopePath, varDef.name],
+      hierarchyPath: [...varDef.scopePath],
       width: varDef.width,
       transitions,
     });
