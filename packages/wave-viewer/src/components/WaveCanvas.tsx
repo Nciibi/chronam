@@ -69,8 +69,8 @@ export function WaveCanvas() {
         return '?';
       }
     }
-    return '0x0';
-  }, []);
+    return '?';
+}, []);
 
   // Play loop
   useEffect(() => {
