@@ -58,10 +58,13 @@ export function runProcess(
 
     try {
       console.log(`[DEBUG] RUNNING: ${command} ${args.join(' ')} (cwd: ${cwd})`);
+      // On Windows, force shell: true = 'cmd /c' to avoid CreateProcess argument encoding issues
+      // with backslash paths and --workdir=. (GHDL mcode on Windows may misparse direct-spawn args)
+      const useShell = process.platform === 'win32';
       child = spawn(command, args, {
         cwd,
         env: env ? { ...process.env, ...env } : process.env,
-        shell: false,
+        shell: useShell,
         stdio: ['pipe', 'pipe', 'pipe'],
       });
     } catch (err) {
