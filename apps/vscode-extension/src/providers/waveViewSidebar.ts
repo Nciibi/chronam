@@ -38,7 +38,22 @@ export class WaveViewSidebarProvider implements vscode.WebviewViewProvider {
 </head>
 <body>
   <div id="root"></div>
-  <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
+    <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
+    <script nonce="${nonce}">
+      window.addEventListener('error', function(e) {
+        acquireVsCodeApi().postMessage({ type: 'webview:error', message: 'error: ' + e.message + ' @ ' + (e.filename||'') + ':' + e.lineno + ':' + e.colno });
+        document.getElementById('root').innerHTML = '<div style="padding:16px;color:red;font-family:monospace">JS Error: ' + e.message + '</div>';
+      });
+      window.addEventListener('unhandledrejection', function(e) {
+        acquireVsCodeApi().postMessage({ type: 'webview:error', message: 'rejection: ' + e.reason });
+      });
+      setTimeout(function() {
+        var root = document.getElementById('root');
+        if (root && root.children.length === 0) {
+          root.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;opacity:0.6;padding:32px;text-align:center"><div style="font-size:24px;margin-bottom:8px">&#9888;</div><p>Wave viewer failed to load</p><p style="font-size:12px;font-family:monospace;margin-top:4px">Check DevTools (Help &rarr; Toggle Developer Tools) for details</p></div>';
+        }
+      }, 3000);
+    </script>
 </body>
 </html>`;
 
@@ -51,6 +66,9 @@ export class WaveViewSidebarProvider implements vscode.WebviewViewProvider {
           break;
         case 'simulation:run':
           vscode.commands.executeCommand('chronam.runSimulation');
+          break;
+        case 'webview:error':
+          console.error('[WaveViewer]', msg.message);
           break;
       }
     });
