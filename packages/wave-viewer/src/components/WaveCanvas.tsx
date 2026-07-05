@@ -203,7 +203,7 @@ export function WaveCanvas() {
     ctx.fillStyle = C.lblBg; ctx.fillRect(0, RULER_H, LABEL_W, h - RULER_H);
     ctx.strokeStyle = C.bdr; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(LABEL_W, RULER_H); ctx.lineTo(LABEL_W, h); ctx.stroke();
 
-    // Signal labels
+    // Signal labels with live value
     sigs.forEach((sig, i) => {
       const y = RULER_H + i * SIG_H - vp.scrollY;
       if (y + SIG_H < RULER_H || y > h) return;
@@ -215,6 +215,13 @@ export function WaveCanvas() {
       ctx.fillText(sig.name, 22, y + SIG_H / 2);
       // Bit width badge
       if (sig.width > 1) { ctx.fillStyle = C.hi; ctx.font = '10px "Segoe UI",sans-serif'; ctx.textBaseline = 'bottom'; ctx.fillText('[' + sig.width + ':0]', LABEL_W - 6, y + SIG_H - 3); }
+      // Value at cursor or play time
+      const cursorTime = cur.primary !== null ? cur.primary : (play.playing ? play.currentTime : null);
+      if (cursorTime !== null) {
+        const val = getValueAt(sig, cursorTime);
+        ctx.fillStyle = col; ctx.font = 'bold 11px monospace'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+        ctx.fillText(val, LABEL_W - 6, y + SIG_H / 2);
+      }
     });
 
     // Ruler
@@ -287,6 +294,19 @@ export function WaveCanvas() {
     });
     ro.observe(bx);
     return () => ro.disconnect();
+  }, []);
+
+  // Ctrl+F / Cmd+F to focus filter
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        filterRef.current?.focus();
+        filterRef.current?.select();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, []);
 
   // Events
