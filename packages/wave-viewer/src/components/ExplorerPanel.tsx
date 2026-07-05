@@ -1,4 +1,5 @@
 import { useChronamStore } from '../store/useChronamStore';
+import { EmptyState } from './EmptyState';
 
 const s: Record<string, React.CSSProperties> = {
   panel: {
@@ -57,36 +58,50 @@ const mockFiles = [
   { name: 'top.sdc', type: 'constraints' },
 ];
 
+const typeIcon: Record<string, string> = {
+  entity: '◇',
+  testbench: '▰',
+  constraints: '⊞',
+};
+
 export function ExplorerPanel() {
   const setActivePanel = useChronamStore((s) => s.setActivePanel);
 
   return (
     <div style={s.panel}>
       <div style={s.header}>Project Files</div>
-      {mockFiles.map((file) => (
-        <div
-          key={file.name}
-          style={s.fileItem}
-          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--vscode-list-hoverBackground,#2a2d2e)'}
-          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-        >
-          <span style={s.icon}>{file.type === 'entity' ? '◇' : file.type === 'testbench' ? '▰' : '⊞'}</span>
-          <span style={s.name}>{file.name}</span>
-          <span style={s.badge}>{file.type}</span>
-        </div>
-      ))}
-      <div style={{ marginTop: 16 }}>
-        <div style={s.header}>Quick Actions</div>
-        <div
-          style={{ ...s.fileItem, marginTop: 4 }}
-          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--vscode-list-hoverBackground,#2a2d2e)'}
-          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-          onClick={() => setActivePanel('build')}
-        >
-          <span style={s.icon}>+</span>
-          <span style={s.name}>Add Files to Project</span>
-        </div>
-      </div>
+      {mockFiles.length === 0 ? (
+        <EmptyState icon="◲" text="No files in project" sub="Open a VHDL file or add files to project" />
+      ) : (
+        <>
+          {mockFiles.map((file) => (
+            <div
+              key={file.name}
+              style={s.fileItem}
+              title={`${file.name} (${file.type})`}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--vscode-list-hoverBackground,#2a2d2e)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+            >
+              <span style={s.icon}>{typeIcon[file.type] || '◇'}</span>
+              <span style={s.name}>{file.name}</span>
+              <span style={s.badge}>{file.type}</span>
+            </div>
+          ))}
+          <div style={{ marginTop: 16 }}>
+            <div style={s.header}>Quick Actions</div>
+            <div
+              style={{ ...s.fileItem, marginTop: 4 }}
+              title="Add VHDL files to project"
+              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--vscode-list-hoverBackground,#2a2d2e)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              onClick={() => setActivePanel('build')}
+            >
+              <span style={s.icon}>+</span>
+              <span style={s.name}>Add Files to Project</span>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
