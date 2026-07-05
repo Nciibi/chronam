@@ -91,7 +91,7 @@ describe('VCD Parser', () => {
 
   it('should parse scalar transitions', () => {
     const data = parseVCD(SAMPLE_VCD);
-    const clk = data.signals.find(s => s.name === 'clk');
+    const clk = data.signals.find(s => s.fullName === 'tb_counter.clk');
     expect(clk!.transitions.length).toBeGreaterThan(0);
 
     // Check first transition
@@ -102,7 +102,7 @@ describe('VCD Parser', () => {
 
   it('should parse vector transitions', () => {
     const data = parseVCD(SAMPLE_VCD);
-    const q = data.signals.find(s => s.name === 'q');
+    const q = data.signals.find(s => s.fullName === 'tb_counter.uut.q');
 
     // Find transition to 0010 (value 2)
     const t2 = q!.transitions.find(t =>
