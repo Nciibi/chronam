@@ -208,13 +208,10 @@ The following polish items from the initial report have been implemented:
 
 ## Remaining Polish Opportunities
 
-- Add transition animations to panel switching
-- Implement panel header collapse/expand
 - Add drag-to-reorder for signal list
 - Implement right-click context menus in panels
-- Add empty-state illustrations for panels with no data
-- Improve loading states with skeleton screens
-- Add tooltip descriptions to all icon buttons
-- Implement keyboard navigation between panels (Ctrl+Tab)
-- Add panel search functionality
 - Implement panel state persistence across VS Code sessions
+- Add panel search/filter functionality
+- Add keyboard shortcut reference panel
+- Implement smooth panel resize handles
+- Add panel header context actions (export, collapse all)
