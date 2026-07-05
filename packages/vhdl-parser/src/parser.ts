@@ -144,10 +144,14 @@ function extractPorts(entityBody: string, uri: string, errors: ParseDiagnostic[]
 function extractGenerics(entityBody: string, _uri: string, _errors: ParseDiagnostic[]): Generic[] {
   const generics: Generic[] = [];
 
-  const genericSectionMatch = entityBody.match(/generic\s*\(([\s\S]*?)\)\s*;/i);
-  if (!genericSectionMatch) return generics;
+  const genericStart = entityBody.match(/generic\s*\(/i);
+  if (!genericStart) return generics;
 
-  const genericSection = genericSectionMatch[1];
+  const openIdx = genericStart.index! + genericStart[0].length - 1;
+  const closeIdx = findBalancedClose(entityBody, openIdx);
+  if (closeIdx === -1) return generics;
+
+  const genericSection = entityBody.slice(openIdx + 1, closeIdx);
   const genericDeclarations = genericSection.split(';').filter((s) => s.trim().length > 0);
 
   for (const decl of genericDeclarations) {
