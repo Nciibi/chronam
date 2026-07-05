@@ -317,8 +317,8 @@ function parseTimescale(text: string): TimescaleSpec {
 
 // ─── Build Output ───────────────────────────────────────────────────────────
 
-function buildWaveformData(state: ParseState): WaveformData {
-  const signals: WaveformSignal[] = [];
+function buildWaveformData(state: ParseState, options?: { filterTestbenchSignals?: boolean }): WaveformData {
+  let signals: WaveformSignal[] = [];
 
   for (const [idCode, varDef] of state.variables) {
     const transitions = state.transitions.get(idCode) ?? [];
@@ -335,6 +335,14 @@ function buildWaveformData(state: ParseState): WaveformData {
       width: varDef.width,
       transitions,
     });
+  }
+
+  // Filter out top-level testbench wrapper signals when nested DUT signals exist
+  if (options?.filterTestbenchSignals) {
+    const hasDeepSignals = signals.some(s => s.hierarchyPath.length > 1);
+    if (hasDeepSignals) {
+      signals = signals.filter(s => s.hierarchyPath.length > 1);
+    }
   }
 
   return {

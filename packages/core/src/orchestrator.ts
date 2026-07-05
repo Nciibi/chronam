@@ -110,7 +110,7 @@ export class SimulationOrchestrator {
       this.delegate.onStatusChange({ state: 'preparing', message: 'Loading waveform...' });
       
       const vcdContent = await this.delegate.readFile(result.waveformPath);
-      const waveformData = parseVCD(vcdContent);
+      const waveformData = parseVCD(vcdContent, { filterTestbenchSignals: true });
 
       this.delegate.onStatusChange({
         state: 'completed',
