@@ -1,5 +1,3 @@
-import { EmptyState } from './EmptyState';
-
 const s: Record<string, React.CSSProperties> = {
   panel: {
     padding: 8,

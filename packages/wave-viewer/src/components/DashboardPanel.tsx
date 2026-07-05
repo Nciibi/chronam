@@ -1,7 +1,6 @@
 import { useChronamStore } from '../store/useChronamStore';
 import { postMessage } from '../vscode';
 import { CollapsibleSection } from './CollapsibleSection';
-import { EmptyState } from './EmptyState';
 
 const s: Record<string, React.CSSProperties> = {
   panel: {

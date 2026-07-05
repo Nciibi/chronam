@@ -73,8 +73,6 @@ export function SidebarNav({ onNavigate }: Props) {
   const setActivePanel = useChronamStore((s) => s.setActivePanel);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const focusIndex = navItems.findIndex((i) => i.id === activePanel);
-
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
