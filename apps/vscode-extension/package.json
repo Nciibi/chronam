@@ -54,6 +54,12 @@
         "category": "Chronam"
       },
       {
+        "command": "chronam.showOutput",
+        "title": "Show Simulation Output",
+        "icon": "$(terminal)",
+        "category": "Chronam"
+      },
+      {
         "command": "chronam.detectSimulator",
         "title": "Detect Simulator",
         "icon": "$(search)",
@@ -66,12 +72,29 @@
         "category": "Chronam"
       }
     ],
+    "keybindings": [
+      {
+        "command": "chronam.runSimulation",
+        "key": "f6",
+        "when": "resourceLangId == vhdl && editorTextFocus"
+      }
+    ],
+    "views": {
+      "chronam": [
+        {
+          "type": "webview",
+          "id": "chronam.waveViewSidebar",
+          "name": "Wave Viewer",
+          "icon": "assets/logo.png"
+        }
+      ]
+    },
     "menus": {
       "editor/title": [
         {
           "command": "chronam.runSimulation",
           "when": "resourceLangId == vhdl",
-          "group": "navigation"
+          "group": "navigation@1"
         }
       ],
       "editor/context": [
