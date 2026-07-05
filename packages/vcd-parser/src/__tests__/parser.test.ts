@@ -122,4 +122,37 @@ describe('VCD Parser', () => {
     expect(data.signals).toEqual([]);
     expect(data.endTime).toBe(0);
   });
+
+  it('should set short signal name (not full path)', () => {
+    const data = parseVCD(SAMPLE_VCD);
+    const clk = data.signals.find(s => s.id === '!');
+    expect(clk).toBeDefined();
+    expect(clk!.name).toBe('clk');
+    expect(clk!.name).not.toBe('tb_counter.clk');
+
+    const q = data.signals.find(s => s.id === '#');
+    expect(q).toBeDefined();
+    expect(q!.name).toBe('q');
+    expect(q!.name).not.toBe('tb_counter.uut.q');
+  });
+
+  it('should filter testbench signals when option is set', () => {
+    const data = parseVCD(SAMPLE_VCD, { filterTestbenchSignals: true });
+    // Only 'q' has hierarchyPath depth 2, clk and reset have depth 1
+    expect(data.signals.length).toBe(1);
+    expect(data.signals[0].name).toBe('q');
+    expect(data.signals[0].fullName).toBe('tb_counter.uut.q');
+  });
+
+  it('should keep all signals when filter is off', () => {
+    const data = parseVCD(SAMPLE_VCD, { filterTestbenchSignals: false });
+    expect(data.signals.length).toBe(3);
+  });
+
+  it('should keep all signals in flat VCD even with filter on', () => {
+    const flatVCD = SAMPLE_VCD.replace(/\$scope module uut \$end\n/g, '').replace(/\$upscope \$end\n/g, '');
+    const data = parseVCD(flatVCD, { filterTestbenchSignals: true });
+    // All signals at depth 1, no deep signals, so keep everything
+    expect(data.signals.length).toBe(3);
+  });
 });
