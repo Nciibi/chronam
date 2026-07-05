@@ -149,15 +149,8 @@ export class SimulationService implements OrchestratorDelegate {
       validateInput: (v) => isNaN(Number(v)) || Number(v) <= 0 ? 'Must be a positive number' : null,
     });
     if (!periodStr) return; // user cancelled
-    const clockPeriodNs = parseInt(periodStr, 10);
-    this.terminal.appendLine(`Clock period: ${clockPeriodNs}ns`);
-
-    // Override clock period in config
-    const origGetSimulationConfig = this.getSimulationConfig.bind(this);
-    this.getSimulationConfig = () => ({
-      ...origGetSimulationConfig(),
-      clockPeriodNs,
-    });
+    this.userClockPeriodNs = parseInt(periodStr, 10);
+    this.terminal.appendLine(`Clock period: ${this.userClockPeriodNs}ns`);
 
     // Clear previous diagnostics
     this.diagnostics?.clear();
