@@ -201,13 +201,12 @@ export function WaveCanvas() {
     ctx.restore();
   }, [wf, vp, cur, play, sigs, t2x, x2t, endT, getValueAt, dimensions]);
 
-  // Resize
+  // Resize — trigger re-render on container resize
   useEffect(() => {
     const bx = boxRef.current;
     if (!bx) return;
     const ro = new ResizeObserver(() => {
-      const ca = canvasRef.current;
-      if (ca) { const dpr = window.devicePixelRatio || 1; ca.width = bx.clientWidth * dpr; ca.height = bx.clientHeight * dpr; ca.style.width = bx.clientWidth + 'px'; ca.style.height = bx.clientHeight + 'px'; }
+      setDimensions({ w: bx.clientWidth, h: bx.clientHeight });
     });
     ro.observe(bx);
     return () => ro.disconnect();
