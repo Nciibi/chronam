@@ -338,11 +338,16 @@ function buildWaveformData(state: ParseState, options?: { filterTestbenchSignals
     });
   }
 
-  // Filter out top-level testbench wrapper signals when nested DUT signals exist
+  // Filter out testbench wrapper signals
   if (options?.filterTestbenchSignals) {
     const hasDeepSignals = signals.some(s => s.hierarchyPath.length > 1);
     if (hasDeepSignals) {
+      // Hierarchy-based: remove signals at depth 1 (e.g., tb_counter.clk)
       signals = signals.filter(s => s.hierarchyPath.length > 1);
+    } else {
+      // Flat VCD fallback: remove signals clearly not from user's RTL
+      const tbPatterns = ['sim_done', 'sim_end', 'done', 'sim_finished'];
+      signals = signals.filter(s => !tbPatterns.includes(s.name.toLowerCase()));
     }
   }
 
