@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useRef } from 'react';
 import type { PanelId } from '../store/useChronamStore';
 import { useChronamStore } from '../store/useChronamStore';
 
@@ -33,6 +34,7 @@ const s: Record<string, React.CSSProperties> = {
     gap: 2,
     flexShrink: 0,
     userSelect: 'none',
+    outline: 'none',
   },
   item: {
     width: 40,
@@ -44,7 +46,7 @@ const s: Record<string, React.CSSProperties> = {
     borderRadius: 4,
     fontSize: 16,
     color: 'var(--vscode-activityBar-inactiveForeground,#858585)',
-    transition: 'color .15s, background .15s',
+    transition: 'color .12s, background .12s',
     position: 'relative',
   },
   active: {
@@ -62,23 +64,58 @@ const s: Record<string, React.CSSProperties> = {
   },
 };
 
-export function SidebarNav() {
+interface Props {
+  onNavigate: (dir: -1 | 1) => void;
+}
+
+export function SidebarNav({ onNavigate }: Props) {
   const activePanel = useChronamStore((s) => s.activePanel);
   const setActivePanel = useChronamStore((s) => s.setActivePanel);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const focusIndex = navItems.findIndex((i) => i.id === activePanel);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowDown') { e.preventDefault(); onNavigate(1); }
+      if (e.key === 'ArrowUp') { e.preventDefault(); onNavigate(-1); }
+    };
+    el.addEventListener('keydown', handler);
+    return () => el.removeEventListener('keydown', handler);
+  }, [onNavigate]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent, idx: number) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setActivePanel(navItems[idx].id);
+    }
+  }, [setActivePanel]);
 
   return (
-    <div style={s.container}>
-      {navItems.map((item) => {
+    <div
+      ref={containerRef}
+      tabIndex={0}
+      role="tablist"
+      aria-label="Chronam panels"
+      style={s.container}
+    >
+      {navItems.map((item, idx) => {
         const isActive = item.id === activePanel;
         return (
           <div
             key={item.id}
+            role="tab"
+            aria-selected={isActive}
+            tabIndex={isActive ? 0 : -1}
             style={{ ...s.item, ...(isActive ? s.active : {}) }}
             onClick={() => setActivePanel(item.id)}
+            onKeyDown={(e) => handleKeyDown(e, idx)}
             title={item.label}
           >
             {isActive && <div style={s.indicator} />}
-            <span>{item.icon}</span>
+            <span aria-hidden="true">{item.icon}</span>
           </div>
         );
       })}
