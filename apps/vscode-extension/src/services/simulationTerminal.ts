@@ -67,6 +67,10 @@ export class SimulationTerminal {
     this.channel.appendLine('');
   }
 
+  show(): void {
+    this.channel.show(true);
+  }
+
   dispose(): void {
     this.channel.dispose();
   }

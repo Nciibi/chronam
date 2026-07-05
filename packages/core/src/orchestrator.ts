@@ -36,12 +36,14 @@ export class SimulationOrchestrator {
   async runSimulation(
     fileContent: string,
     filePath: string,
-    workDir: string
+    workDir: string,
+    onPhase?: (phase: string, detail: string) => void
   ): Promise<{ waveformData?: WaveformData; entity?: Entity; config?: SimulationConfig; error?: any }> {
     
     // Phase 1: Parse VHDL
     this.delegate.onStatusChange({ state: 'preparing', message: 'Parsing VHDL...' });
     this.delegate.onLogInfo('Parsing VHDL file:', filePath);
+    onPhase?.('parsing', `Parsing ${path.basename(filePath)}`);
 
     const parsedFile = parseVHDLFile(fileContent, filePath);
 
