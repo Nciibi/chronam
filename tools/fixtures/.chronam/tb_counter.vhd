@@ -1,6 +1,6 @@
 -- Auto-generated testbench by Chronam
 -- Entity: counter
--- Generated: 2026-07-05T17:01:40.972Z
+-- Generated: 2026-07-05T17:02:29.656Z
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -15,8 +15,8 @@ architecture sim of tb_counter is
     signal reset : std_logic := '0';
     signal q : std_logic_vector(3 downto 0) := (others => '0');
 
-    constant CLK_PERIOD : time := 1000 ns;
-    constant CLK_HALF   : time := 500 ns;
+    constant CLK_PERIOD : time := 10000 ns;
+    constant CLK_HALF   : time := 5000 ns;
 
     signal sim_done : boolean := false;
 
@@ -47,7 +47,7 @@ begin
     begin
         -- Reset sequence
         reset <= '1';
-        wait for 2000 ns;
+        wait for 20000 ns;
         reset <= '0';
 
         -- Run simulation for 1000 ns
