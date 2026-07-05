@@ -1,6 +1,6 @@
 -- Auto-generated testbench by Chronam
 -- Entity: tb_alu
--- Generated: 2026-07-05T15:04:55.080Z
+-- Generated: 2026-07-05T15:05:03.537Z
 
 library ieee;
 use ieee.std_logic_1164.all;
