@@ -328,9 +328,14 @@ function buildWaveformData(state: ParseState, options?: { filterTestbenchSignals
       ? varDef.scopePath.join('.') + '.' + varDef.name
       : varDef.name;
 
+    // Extract short name (last segment after dot) in case VCD uses fully scoped names
+    const shortName = varDef.name.includes('.')
+      ? varDef.name.split('.').pop()!
+      : varDef.name;
+
     signals.push({
       id: idCode,
-      name: varDef.name,
+      name: shortName,
       fullName,
       hierarchyPath: [...varDef.scopePath],
       width: varDef.width,
