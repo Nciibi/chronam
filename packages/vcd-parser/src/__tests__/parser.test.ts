@@ -85,7 +85,8 @@ describe('VCD Parser', () => {
   it('should parse signal hierarchy', () => {
     const data = parseVCD(SAMPLE_VCD);
     const q = data.signals.find(s => s.name === 'q');
-    expect(q!.hierarchyPath).toEqual(['tb_counter', 'uut', 'q']);
+    expect(q!.hierarchyPath).toEqual(['tb_counter', 'uut']);
+    expect(q!.fullName).toBe('tb_counter.uut.q');
   });
 
   it('should parse scalar transitions', () => {
