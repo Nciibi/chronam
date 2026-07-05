@@ -365,6 +365,19 @@ function parseRange(match: RegExpMatchArray): VectorRange {
 
 // ─── Utilities ──────────────────────────────────────────────────────────────
 
+/** Find the index of the matching close paren for the open paren at openIdx */
+function findBalancedClose(text: string, openIdx: number): number {
+  let depth = 1;
+  for (let i = openIdx + 1; i < text.length; i++) {
+    if (text[i] === '(') depth++;
+    else if (text[i] === ')') {
+      depth--;
+      if (depth === 0) return i;
+    }
+  }
+  return -1;
+}
+
 function getLineNumber(content: string, offset: number): number {
   let line = 1;
   for (let i = 0; i < offset && i < content.length; i++) {
