@@ -157,15 +157,14 @@ describe('VCD Parser', () => {
   });
 
   it('should extract short name from fully scoped VCD names', () => {
-    // Simulate GHDL VCD with fully scoped names like "tb_counter.clk"
     const scopedVCD = SAMPLE_VCD.replace('$var wire 1 ! clk $end', '$var wire 1 ! tb_counter.clk $end')
       .replace('$var wire 1 " reset $end', '$var wire 1 " tb_counter.reset $end')
       .replace('$var wire 4 # q [3:0] $end', '$var wire 4 # tb_counter.uut.q [3:0] $end');
     const data = parseVCD(scopedVCD, { filterTestbenchSignals: true });
-    // shortName should extract last segment: "clk" → "clk", "tb_counter.clk" → "clk"
-    expect(data.signals.length).toBe(3);
-    expect(data.signals[0].name).toBe('clk');
-    expect(data.signals[1].name).toBe('reset');
-    // With filter and no deep hierarchy (all at path ["tb_counter"]), flat fallback keeps all
+    // Filter removes depth-1 signals (clk, reset), keeps q at depth 2
+    expect(data.signals.length).toBe(1);
+    // Name should be short name "q", not "tb_counter.uut.q"
+    expect(data.signals[0].name).toBe('q');
+    expect(data.signals[0].name).not.toContain('tb_counter');
   });
 });
