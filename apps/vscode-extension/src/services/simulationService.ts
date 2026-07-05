@@ -140,6 +140,24 @@ export class SimulationService implements OrchestratorDelegate {
     this.terminal.begin();
     this.terminal.appendLine(`Simulator: ${simInfo.name} v${simInfo.version}`);
 
+    // Prompt for clock period (interactive input)
+    const periodStr = await vscode.window.showInputBox({
+      prompt: 'Enter clock period in ns',
+      value: String(this.getSimulationConfig().clockPeriodNs),
+      placeHolder: 'e.g. 10',
+      validateInput: (v) => isNaN(Number(v)) || Number(v) <= 0 ? 'Must be a positive number' : null,
+    });
+    if (!periodStr) return; // user cancelled
+    const clockPeriodNs = parseInt(periodStr, 10);
+    this.terminal.appendLine(`Clock period: ${clockPeriodNs}ns`);
+
+    // Override clock period in config
+    const origGetSimulationConfig = this.getSimulationConfig.bind(this);
+    this.getSimulationConfig = () => ({
+      ...origGetSimulationConfig(),
+      clockPeriodNs,
+    });
+
     // Clear previous diagnostics
     this.diagnostics?.clear();
 
