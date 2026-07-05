@@ -13,8 +13,8 @@ async function main() {
   };
 
   const orch = new SimulationOrchestrator(delegate);
-  const __dirname = path.dirname(process.argv[1]);
-  const filePath = path.resolve(__dirname, 'tools/fixtures/counter.vhdl');
+  const baseDir = path.dirname(process.argv[1]);
+  const filePath = path.resolve(baseDir, 'tools/fixtures/counter.vhdl');
   const fileContent = await fs.promises.readFile(filePath, 'utf-8');
   const workDir = path.resolve(__dirname, 'tools/fixtures/.chronam');
 
