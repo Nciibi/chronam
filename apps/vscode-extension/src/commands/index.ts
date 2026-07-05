@@ -50,4 +50,12 @@ export function registerCommands(
       vscode.window.showInformationMessage('Simulation stop requested.');
     })
   );
+
+  // Show Simulation Output
+  context.subscriptions.push(
+    vscode.commands.registerCommand('chronam.showOutput', () => {
+      logger.info('Command: Show Output');
+      simulationService.showTerminal();
+    })
+  );
 }

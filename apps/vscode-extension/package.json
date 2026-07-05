@@ -162,6 +162,17 @@
           "type": "boolean",
           "default": true,
           "description": "Auto-open wave viewer after successful simulation"
+        },
+        "chronam.general.livePreview": {
+          "type": "boolean",
+          "default": true,
+          "description": "Auto-re-run simulation on file save for instant feedback"
+        },
+        "chronam.general.waveViewerLocation": {
+          "type": "string",
+          "default": "editor",
+          "enum": ["editor", "sidebar"],
+          "description": "Where to show the waveform viewer after simulation"
         }
       }
     },
