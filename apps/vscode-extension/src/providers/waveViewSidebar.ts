@@ -1,26 +1,45 @@
 import * as vscode from 'vscode';
-import type { WaveformData, Entity, SimulationConfig, ExtensionToWebviewMessage, WebviewToExtensionMessage } from '@chronam/shared-types';
+import type { WaveformData, ExtensionToWebviewMessage, WebviewToExtensionMessage } from '@chronam/shared-types';
 
 export class WaveViewSidebarProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'chronam.waveViewSidebar';
 
   private view?: vscode.WebviewView;
   private waveformData: WaveformData | null = null;
-  private entity?: Entity;
-  private config?: SimulationConfig;
 
   resolveWebviewView(webviewView: vscode.WebviewView): void {
     this.view = webviewView;
 
     webviewView.webview.options = {
       enableScripts: true,
-      retainContextWhenHidden: true,
-      localResourceRoots: [webviewView.viewType === WaveViewSidebarProvider.viewType
-        ? vscode.Uri.joinPath(vscode.Uri.file(__dirname), '..')
-        : vscode.Uri.file(__dirname)],
+      localResourceRoots: [webviewView.webview.cspSource].map(s => vscode.Uri.parse(s)) as any,
     };
 
-    webviewView.webview.html = this.getHtmlContent(webviewView.webview);
+    const scriptUri = webviewView.webview.asWebviewUri(
+      vscode.Uri.joinPath(vscode.Uri.file(__dirname), '..', '..', '..', '..', 'packages', 'wave-viewer', 'dist', 'assets', 'index.js')
+    );
+    const styleUri = webviewView.webview.asWebviewUri(
+      vscode.Uri.joinPath(vscode.Uri.file(__dirname), '..', '..', '..', '..', 'packages', 'wave-viewer', 'dist', 'assets', 'index.css')
+    );
+
+    const nonce = getNonce();
+    webviewView.webview.html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' ${webviewView.webview.cspSource}; script-src 'nonce-${nonce}';">
+  <link rel="stylesheet" type="text/css" href="${styleUri}">
+  <title>Wave Viewer</title>
+  <style>
+    body { margin: 0; padding: 0; overflow: hidden; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
+</body>
+</html>`;
 
     webviewView.webview.onDidReceiveMessage((msg: WebviewToExtensionMessage) => {
       switch (msg.type) {
@@ -36,15 +55,10 @@ export class WaveViewSidebarProvider implements vscode.WebviewViewProvider {
     });
   }
 
-  loadWaveform(data: WaveformData, entity?: Entity, config?: SimulationConfig): void {
+  loadWaveform(data: WaveformData): void {
     this.waveformData = data;
-    this.entity = entity;
-    this.config = config;
     if (this.view) {
       this.postMessage({ type: 'waveform:load', data });
-      if (!this.view.visible) {
-        vscode.commands.executeCommand('workbench.view.extension.chronam-sidebar');
-      }
     }
   }
 
@@ -54,39 +68,6 @@ export class WaveViewSidebarProvider implements vscode.WebviewViewProvider {
 
   private postMessage(message: ExtensionToWebviewMessage): void {
     this.view?.webview.postMessage(message);
-  }
-
-  private getHtmlContent(webview: vscode.Webview): string {
-    const nonce = getNonce();
-    const extensionUri = vscode.Uri.file(
-      vscode.extensions.getExtension('chronam.chonram')?.extensionPath
-      || process.cwd()
-    );
-
-    const scriptUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(extensionUri, '..', '..', 'packages', 'wave-viewer', 'dist', 'assets', 'index.js')
-    );
-    const styleUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(extensionUri, '..', '..', 'packages', 'wave-viewer', 'dist', 'assets', 'index.css')
-    );
-
-    return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' ${webview.cspSource}; script-src 'nonce-${nonce}';">
-  <link rel="stylesheet" type="text/css" href="${styleUri}">
-  <title>Wave Viewer</title>
-  <style>
-    body { margin: 0; padding: 0; overflow: hidden; }
-  </style>
-</head>
-<body>
-  <div id="root"></div>
-  <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
-</body>
-</html>`;
   }
 }
 

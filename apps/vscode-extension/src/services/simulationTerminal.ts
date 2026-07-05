@@ -12,7 +12,7 @@ export class SimulationTerminal {
   private currentPhase: number = 0;
 
   constructor() {
-    this.channel = vscode.window.createOutputChannel('Chronam Simulation', { log: false });
+    this.channel = vscode.window.createOutputChannel('Chronam Simulation');
   }
 
   begin(): void {
