@@ -1,9 +1,10 @@
 const path = require('path');
 const fs = require('fs');
 
-// Load the engine and orchestrator directly from source (already compiled)
-const distDir = path.resolve(__dirname, 'packages/core/dist');
-const { SimulationOrchestrator } = require(path.join(distDir, 'index.js'));
+// Run from packages/core so node_modules resolves correctly
+process.chdir(path.resolve(__dirname, 'packages/core'));
+
+const { SimulationOrchestrator } = require('./dist/index.js');
 
 async function main() {
   const delegate = {
@@ -16,9 +17,10 @@ async function main() {
   };
 
   const orch = new SimulationOrchestrator(delegate);
-  const filePath = path.resolve(__dirname, 'tools/fixtures/counter.vhdl');
+  const rootDir = path.resolve(__dirname, '../..');
+  const filePath = path.resolve(rootDir, 'tools/fixtures/counter.vhdl');
   const fileContent = await fs.promises.readFile(filePath, 'utf-8');
-  const workDir = path.resolve(__dirname, 'tools/fixtures/.chronam');
+  const workDir = path.resolve(rootDir, 'tools/fixtures/.chronam');
 
   // Clean slate
   try { fs.rmSync(workDir, { recursive: true }); } catch(e) {}
