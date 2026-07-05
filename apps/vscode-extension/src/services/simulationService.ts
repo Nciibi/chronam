@@ -8,7 +8,6 @@
 
 import * as vscode from 'vscode';
 import * as path from 'path';
-import * as crypto from 'crypto';
 import { SimulationOrchestrator } from '@chronam/core';
 import type { OrchestratorDelegate } from '@chronam/core';
 import type {
@@ -29,13 +28,9 @@ export class SimulationService implements OrchestratorDelegate {
   private orchestrator: SimulationOrchestrator;
   private diagnostics: vscode.DiagnosticCollection | null = null;
   private statusListeners: StatusListener[] = [];
-  private currentStatus: SimulationStatus = { state: 'idle' };
   private lastWaveformData: WaveformData | null = null;
   private terminal: SimulationTerminal;
   private sidebarProvider?: WaveViewSidebarProvider;
-
-  // Parse cache: keyed by file path, stores content hash + parsed entities
-  private parseCache = new Map<string, { hash: string; entities: Entity[] }>();
 
   constructor(context: vscode.ExtensionContext, logger: Logger) {
     this.context = context;
