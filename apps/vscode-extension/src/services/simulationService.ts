@@ -66,7 +66,6 @@ export class SimulationService implements OrchestratorDelegate {
 
   // --- Orchestrator Delegate Implementation ---
   onStatusChange = (status: SimulationStatus): void => {
-    this.currentStatus = status;
     for (const listener of this.statusListeners) {
       listener(status);
     }
