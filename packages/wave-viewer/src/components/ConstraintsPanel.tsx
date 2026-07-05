@@ -1,3 +1,5 @@
+import { EmptyState } from './EmptyState';
+
 const s: Record<string, React.CSSProperties> = {
   panel: {
     padding: 8,
@@ -41,7 +43,7 @@ const s: Record<string, React.CSSProperties> = {
     width: '100%',
     textAlign: 'center',
     marginTop: 8,
-    transition: 'background .15s',
+    transition: 'background .12s',
   },
 };
 
@@ -56,17 +58,24 @@ export function ConstraintsPanel() {
   return (
     <div style={s.panel}>
       <div style={s.header}>Timing Constraints</div>
-      {constraints.map((c, i) => (
-        <div key={i} style={s.constraintItem}
-          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--vscode-list-hoverBackground,#2a2d2e)'}
-          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-        >
-          <span style={s.icon}>⊞</span>
-          <span style={s.name}>{c.name}</span>
-          <span style={s.badge}>{c.type}</span>
-        </div>
-      ))}
-      <button style={s.btn}>+ Add Constraint</button>
+      {constraints.length === 0 ? (
+        <EmptyState icon="⊞" text="No constraints defined" sub="Add timing constraints for your design" />
+      ) : (
+        <>
+          {constraints.map((c, i) => (
+            <div key={i} style={s.constraintItem}
+              title={`${c.type} constraint on ${c.target}`}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--vscode-list-hoverBackground,#2a2d2e)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+            >
+              <span style={s.icon}>⊞</span>
+              <span style={s.name}>{c.name}</span>
+              <span style={s.badge}>{c.type}</span>
+            </div>
+          ))}
+          <button style={s.btn} title="Add a new timing constraint">+ Add Constraint</button>
+        </>
+      )}
     </div>
   );
 }

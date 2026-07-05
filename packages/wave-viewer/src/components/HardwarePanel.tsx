@@ -1,3 +1,5 @@
+import { EmptyState } from './EmptyState';
+
 const s: Record<string, React.CSSProperties> = {
   panel: {
     padding: 8,
@@ -37,16 +39,16 @@ const s: Record<string, React.CSSProperties> = {
     width: '100%',
     textAlign: 'center',
     marginTop: 8,
-    transition: 'background .15s',
+    transition: 'background .12s',
   },
 };
 
 export function HardwarePanel() {
   return (
     <div style={s.panel}>
-      <div style={s.header}>Hardware Devices</div>
+      <div style={s.header}>Simulator</div>
       <div style={s.row}>
-        <span style={s.label}>Detected Simulator</span>
+        <span style={s.label}>Detected</span>
         <span style={s.badge}>GHDL 4.1.0</span>
       </div>
       <div style={{ marginTop: 16 }}>
@@ -56,7 +58,7 @@ export function HardwarePanel() {
         <div style={s.row}><span style={s.label}>BRAM</span><span style={s.value}>0 / 20 (0%)</span></div>
         <div style={s.row}><span style={s.label}>DSP</span><span style={s.value}>0 / 14 (0%)</span></div>
       </div>
-      <button style={s.btn}>⟳ Refresh Device Info</button>
+      <button style={s.btn} title="Refresh hardware device information">⟳ Refresh Device Info</button>
     </div>
   );
 }
