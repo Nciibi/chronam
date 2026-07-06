@@ -81,7 +81,7 @@ export class GHDLAdapter implements SimulatorAdapter {
   }
 
   private runArgs(args: string[], workDir: string, timeoutMs: number, onStderr?: (line: string) => void) {
-    if (onStderr) onStderr(`$ ghdl ${args.join(' ')} (cwd: ${this.normPath(workDir)})`);
+    if (onStderr) onStderr(`$ ghdl ${args.join(' ')} (cwd: ${workDir})`);
     return runProcess(this.ghdlPath, args, {
       cwd: workDir,
       timeoutMs,
