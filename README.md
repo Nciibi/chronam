@@ -2,75 +2,108 @@
   <br />
   <img src="https://raw.githubusercontent.com/Nciibi/chronam/main/docs/assets/logo.png" alt="Chronam Logo" width="120" />
   <h1>Chronam</h1>
-  <p><strong>The Modern VHDL Development Environment for VS Code</strong></p>
-  
+  <p><strong>The Modern VHDL Development Environment</strong></p>
+
   <p>
     <a href="https://github.com/Nciibi/chronam/actions"><img src="https://img.shields.io/github/actions/workflow/status/Nciibi/chronam/build.yml?branch=main&style=flat-square" alt="Build Status"></a>
     <a href="https://github.com/Nciibi/chronam/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License"></a>
     <a href="https://marketplace.visualstudio.com/items?itemName=Nciibi.chronam"><img src="https://img.shields.io/badge/VS%20Code-Extension-007ACC?style=flat-square&logo=visual-studio-code" alt="VS Code Extension"></a>
+    <a href="https://crates.io/crates/chronam"><img src="https://img.shields.io/badge/Rust-CLI-B7410E?style=flat-square&logo=rust" alt="Rust CLI"></a>
     <a href="https://github.com/Nciibi/chronam"><img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-success?style=flat-square" alt="Platform"></a>
-    <a href="https://github.com/Nciibi/chronam"><img src="https://img.shields.io/badge/TypeScript-5.x-blue?style=flat-square&logo=typescript" alt="TypeScript"></a>
-  </p>                    
-  <br />                   
+  </p>
+  <br />
 </div>
 
-**Chronam** is a high-performance, cross-platform extension for Visual Studio Code designed to replace the fragmented, painful UX of legacy HDL tools. It brings parsing, compiling, simulating, and a blazing fast hardware-accelerated waveform viewer directly into your favorite editor.
+Chronam is a high-performance, cross-platform VHDL development environment. It combines a **VS Code extension** for interactive editing and waveform viewing with a **standalone Rust CLI** for build automation and CI/CD pipelines — all powered by GHDL.
 
-Write VHDL, press Run, and analyze the waveforms natively in VS Code.
+Write VHDL, press Run, and analyze the waveforms natively in VS Code — or run `chronam build` in your terminal.
 
 ---
 
-## ✨ Features
+## 📦 Products
 
-- 🚀 **One-Click Simulation** — Hit `▶ Run Simulation` to seamlessly compile, elaborate, and simulate via GHDL.
-- ⚡ **Lightning-Fast Wave Viewer** — Custom HTML5 Canvas 2D waveform renderer handles 1,000+ signals with zero lag. Includes adaptive zoom, pan, and cursor measurements.
-- 🧠 **Smart Entity Detection** — Regex-based parser detects entities, ports, architectures, and internal signals on the fly.
-- 📝 **Auto-Testbench Generation** — Select an entity, and Chronam writes the boilerplate. Automatically detects clock/reset signals and binds them to auto-generated stimulus processes.
-- 🛡️ **Human-Readable Errors** — Cryptic `stderr` simulator outputs are intercepted and translated into inline VS Code Diagnostics and error overlays.
-- 🧩 **Modular Architecture** — Built on a Turborepo foundation, decoupling the simulation orchestration, parsers, and renderer for ultimate extensibility.
+### VS Code Extension
+
+- 🚀 **One-Click Simulation** — Hit `▶ Run Simulation` to compile, elaborate, and simulate via GHDL.
+- ⚡ **Lightning-Fast Wave Viewer** — Custom HTML5 Canvas 2D waveform renderer handles 1,000+ signals with zero lag. Adaptive zoom, pan, and cursor measurements.
+- 🧠 **Smart Entity Detection** — Regex-based parser extracts entities, ports, architectures, and internal signals on the fly.
+- 📝 **Auto-Testbench Generation** — Select an entity, and Chronam writes the boilerplate with clock/reset stimulus.
+- 🛡️ **Human-Readable Errors** — Cryptic GHDL `stderr` output is translated into inline VS Code Diagnostics.
+
+### CLI (`chronam`)
+
+A professional Rust CLI for headless build automation, CI/CD, and advanced users:
+
+| Command | Description |
+|---------|-------------|
+| `chronam new`    | Scaffold a new VHDL project |
+| `chronam build`  | Compile and elaborate all sources |
+| `chronam simulate` | Run simulation and export waveforms |
+| `chronam test`   | Auto-discover and run testbenches |
+| `chronam lint`   | Syntax-check all source files |
+| `chronam compile` | Compile individual files |
+| `chronam clean`  | Remove build artifacts |
+| `chronam doctor` | Diagnose environment (GHDL, Git, etc.) |
+| `chronam watch`  | Rebuild on file changes |
+| `chronam info`   | Show project metadata |
+| `chronam completion` | Generate shell completions |
+
+All commands feature colored output, rich tables, progress bars, and actionable error messages.
 
 ## 🚀 Getting Started
 
-### Prerequisites
+### VS Code Extension
 
-1. **Visual Studio Code** (v1.85.0 or newer)
-2. **GHDL** (must be installed and available on your system `PATH`)
-   - **Windows:** Download from the [GHDL Releases page](https://github.com/ghdl/ghdl/releases).
-   - **Linux:** Run `sudo apt install ghdl` or build from source.
-   - **macOS:** Install via Homebrew `brew install ghdl`.
+1. Install **GHDL** and add it to your `PATH`.
+2. Install **Chronam** from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=Nciibi.chronam).
+3. Open any `.vhd` or `.vhdl` file — CodeLens buttons appear above each entity.
 
-### Installation for Developers
-
-To run and modify Chronam locally:
+### CLI
 
 ```bash
-# 1. Clone the repository
+# Install via Cargo (requires Rust 1.81+)
+cargo install chronam
+
+# Or build from source
+git clone https://github.com/Nciibi/chronam.git
+cd chronam/packages/cli
+cargo build --release
+./target/release/chronam --help
+```
+
+### Development Setup
+
+```bash
+# Clone the repository
 git clone https://github.com/Nciibi/chronam.git
 cd chronam
 
-# 2. Install dependencies (Requires pnpm)
+# Install JS dependencies (requires pnpm)
 pnpm install
 
-# 3. Build the monorepo packages
+# Build all monorepo packages
 pnpm build
 
-# 4. Open the extension in VS Code
-code apps/vscode-extension
+# Build the Rust CLI separately
+cargo build --manifest-path packages/cli/Cargo.toml
+
+# Open the extension in VS Code
+code .
 ```
 
-*Press `F5` in the VS Code window to launch the Extension Development Host.*
+*Press `F5` in VS Code to launch the Extension Development Host.*
 
 ## 📖 Usage Workflow
 
 1. Open any `.vhd` or `.vhdl` file in VS Code.
-2. Chronam will parse the file and inject a **CodeLens** directly above your entity declaration.
-3. Click **▶ Run Simulation** to execute the flow.
-4. If no testbench exists, click **📝 Generate Testbench** to scaffold one instantly.
-5. Once simulation completes, the **Chronam Wave Viewer** will open automatically as a split panel displaying the generated VCD file.
+2. Click **▶ Run Simulation** (injected as CodeLens above entities).
+3. No testbench? Click **📝 Generate Testbench** to scaffold one.
+4. View waveforms in the built-in **Chronam Wave Viewer**.
+5. For CI/CD, run `chronam build && chronam test` in your pipeline.
 
 ## 🏗️ Architecture
 
-Chronam is built as a highly modular `pnpm` workspace orchestrated by Turborepo:
+Chronam is a monorepo managed by Turborepo with two language runtimes:
 
 ```mermaid
 graph TD
@@ -80,38 +113,77 @@ graph TD
     A --> E(Wave Viewer UI)
     E --> F(Wave Renderer)
     E --> G(VCD Parser)
-    
+    H[CLI - chronam] --> B
+    H --> C
+    H --> I(GHDL Adapter)
+
     style A fill:#007ACC,stroke:#fff,stroke-width:2px,color:#fff
+    style H fill:#B7410E,stroke:#fff,stroke-width:2px,color:#fff
 ```
 
-| Package | Description |
-|---|---|
-| `apps/vscode-extension` | The VS Code entry point, commands, and CodeLens providers. |
-| `packages/simulation-engine` | Orchestrator and CLI adapter for backend simulators (GHDL). |
-| `packages/vcd-parser` | Single-pass IEEE 1364 VCD file tokenizer and parser. |
-| `packages/vhdl-parser` | Syntax extractor for entities, ports, and architectures. |
-| `packages/testbench-generator` | Boilerplate VHDL code generation and stimulus mapping. |
-| `packages/wave-renderer` | High-performance HTML Canvas 2D drawing engine. |
-| `packages/shared-types` | Strictly typed interfaces governing the IPC protocols. |
+| Package | Type | Description |
+|---|---|---|
+| `chronam` (root) | Extension | VS Code extension entry point |
+| `packages/core` | TS | Editor-agnostic orchestration layer |
+| `packages/simulation-engine` | TS | GHDL adapter and simulation orchestration |
+| `packages/vcd-parser` | TS | IEEE 1364 VCD tokenizer and parser |
+| `packages/vhdl-parser` | TS | Entity, port, and architecture extraction |
+| `packages/testbench-generator` | TS | VHDL testbench scaffolding |
+| `packages/wave-renderer` | TS | HTML Canvas 2D waveform engine |
+| `packages/wave-viewer` | TS/React | Webview-based waveform UI |
+| `packages/shared-types` | TS | IPC protocol interfaces |
+| `packages/cli` | Rust | Standalone VHDL development CLI |
 
 ## 🗺️ Roadmap
 
 | Phase | Milestone | Status |
-|:---:|---|:---:|
+|:---:|---|---|
 | **v0.1** | Core pipeline, VCD parsing, GHDL adapter, Canvas Wave Viewer | 🟢 Done |
-| **v0.2** | Interactive UI controls, signal grouping, radix switching (Hex/Dec/Bin) | 🟡 Active |
-| **v0.3** | Automated FSM visualization, timing violation cursors | ⚪ Planned |
-| **v0.4** | AI-assisted debugging, generic Simulator Adapter (ModelSim/Verilator) | ⚪ Future |
+| **v0.2** | Interactive UI controls, signal grouping, radix switching | 🟡 Active |
+| **v0.3** | Rust CLI GA, waveform renderer redesign, CI/CD integration | 🟡 Active |
+| **v0.4** | FSM visualization, timing violation cursors | ⚪ Planned |
+| **v0.5** | AI-assisted debugging, ModelSim/Verilator adapters | ⚪ Future |
 
 ## 🤝 Contributing
 
-We welcome contributions from the community! Please read our [Contributing Guidelines](CONTRIBUTING.md) for details on our code of conduct, development process, and how to submit pull requests.
+We welcome contributions of all kinds — whether it's a bug report, a feature request, or a pull request.
+
+### Quick Start for Contributors
+
+1. Fork the repository.
+2. Set up the development environment (see [Getting Started](#development-setup)).
+3. Pick an issue from the [tracker](https://github.com/Nciibi/chronam/issues).
+4. Follow the [contribution guidelines](CONTRIBUTING.md).
+5. Submit a pull request.
+
+### What We Need Help With
+
+- **Rust CLI** — New commands, GHDL edge cases, cross-platform testing.
+- **Waveform Viewer** — UI polish, performance, signal grouping, radix display.
+- **VHDL Parser** — Support for more VHDL-2008 constructs.
+- **Documentation** — Tutorials, API docs, example projects.
+- **Testing** — Integration tests for the simulation pipeline.
 
 ## 📄 License
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+Copyright © 2024 The Chronam Contributors
+
+Licensed under the **MIT License** (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at:
+
+<https://opensource.org/licenses/MIT>
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an **"AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND**, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+The full license text is available in the [LICENSE](LICENSE) file.
 
 ---
+
 <div align="center">
-  <sub>Built with ❤️ by <a href="https://github.com/Nciibi">Nciibi</a> and contributors.</sub>
+  <sub>Built with ❤️ by <a href="https://github.com/Nciibi">Nciibi</a> and <a href="https://github.com/Nciibi/chronam/graphs/contributors">contributors</a>.</sub>
 </div>
