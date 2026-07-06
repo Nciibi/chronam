@@ -7,35 +7,43 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-::-webkit-scrollbar { width:8px; height:8px; }
+::-webkit-scrollbar { width:6px; height:6px; }
 ::-webkit-scrollbar-track { background:transparent; }
-::-webkit-scrollbar-thumb { background:var(--vscode-scrollbarSlider-background,#424242); border-radius:4px; }
+::-webkit-scrollbar-thumb { background:var(--vscode-scrollbarSlider-background,#424242); border-radius:3px; }
 ::-webkit-scrollbar-thumb:hover { background:var(--vscode-scrollbarSlider-hoverBackground,#4f4f4f); }
 ::-webkit-scrollbar-corner { background:transparent; }
 
+button { font-family:inherit; }
 button:hover { filter: brightness(1.15); }
 button:active { filter: brightness(0.85); }
-input:focus, select:focus { outline:1px solid var(--vscode-focusBorder,#0e639c); outline-offset:-1px; }
+button:focus-visible, select:focus-visible, input:focus-visible {
+  outline:1px solid var(--vscode-focusBorder,#0e639c);
+  outline-offset:-1px;
+}
+a:focus-visible, div[tabindex]:focus-visible {
+  outline:1px solid var(--vscode-focusBorder,#0e639c);
+  outline-offset:-2px;
+}
 ::selection { background:var(--vscode-editor-selectionBackground,#264f78); }
 
 @keyframes fadeIn {
-  from { opacity:0; }
-  to { opacity:1; }
+  from { opacity:0.5; transform:translateY(2px); }
+  to { opacity:1; transform:translateY(0); }
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
+@keyframes pulse {
+  0%, 100% { opacity:0.4; }
+  50% { opacity:1; }
+}
+
 .panel-fade-in {
-  animation: fadeIn 0.12s ease-out;
+  animation: fadeIn 0.1s ease-out;
 }
 
 .pulse {
   animation: pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity:0.4; }
-  50% { opacity:1; }
 }

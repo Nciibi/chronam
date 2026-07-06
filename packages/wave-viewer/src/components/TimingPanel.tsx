@@ -72,61 +72,66 @@ const clockDomains = [
 
 export function TimingPanel() {
   const timingSummary = useChronamStore((s) => s.timingSummary);
+  const hasData = timingSummary.slack !== '—' || timingSummary.clockDomains > 0;
 
   return (
     <div style={s.panel}>
-      <CollapsibleSection title="Timing Summary">
-        <div style={s.row}>
-          <span style={s.label}>Worst Slack</span>
-          <span style={{ ...s.value, color: timingSummary.slack.startsWith('-') ? '#f44747' : '#4ec9b0' }}>{timingSummary.slack}</span>
-        </div>
-        <div style={s.row}>
-          <span style={s.label}>Critical Path</span>
-          <span style={s.value}>{timingSummary.criticalPath}</span>
-        </div>
-        <div style={s.row}>
-          <span style={s.label}>Clock Domains</span>
-          <span style={s.value}>{timingSummary.clockDomains}</span>
-        </div>
-        <div style={s.row}>
-          <span style={s.label}>Timing Violations</span>
-          <span style={{ ...s.value, color: timingSummary.violations > 0 ? '#f44747' : '#4ec9b0' }}>{timingSummary.violations}</span>
-        </div>
-      </CollapsibleSection>
-
-      {clockDomains.length > 0 ? (
-        <CollapsibleSection title="Clock Domains">
-          <table style={s.table}>
-            <thead>
-              <tr>
-                <th style={s.th}>Clock</th>
-                <th style={s.th}>Freq</th>
-                <th style={s.th}>Period</th>
-                <th style={s.th}>Slack</th>
-                <th style={s.th}>Violations</th>
-              </tr>
-            </thead>
-            <tbody>
-              {clockDomains.map((cd) => (
-                <tr
-                  key={cd.name}
-                  style={s.hoverRow}
-                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--vscode-list-hoverBackground,#2a2d2e)'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                  title={`${cd.name}: ${cd.freq}, slack ${cd.slack}`}
-                >
-                  <td style={s.td}>{cd.name}</td>
-                  <td style={s.td}>{cd.freq}</td>
-                  <td style={s.td}>{cd.period}</td>
-                  <td style={{ ...s.td, color: cd.violations > 0 ? '#f44747' : '#4ec9b0' }}>{cd.slack}</td>
-                  <td style={s.td}>{cd.violations}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </CollapsibleSection>
-      ) : (
+      {!hasData ? (
         <EmptyState icon="⌚" text="No timing data" sub="Run synthesis to generate timing analysis" />
+      ) : (
+        <>
+          <CollapsibleSection title="Timing Summary">
+            <div style={s.row}>
+              <span style={s.label}>Worst Slack</span>
+              <span style={{ ...s.value, color: timingSummary.slack.startsWith('-') ? '#f44747' : '#4ec9b0' }}>{timingSummary.slack}</span>
+            </div>
+            <div style={s.row}>
+              <span style={s.label}>Critical Path</span>
+              <span style={s.value}>{timingSummary.criticalPath}</span>
+            </div>
+            <div style={s.row}>
+              <span style={s.label}>Clock Domains</span>
+              <span style={s.value}>{timingSummary.clockDomains}</span>
+            </div>
+            <div style={s.row}>
+              <span style={s.label}>Timing Violations</span>
+              <span style={{ ...s.value, color: timingSummary.violations > 0 ? '#f44747' : '#4ec9b0' }}>{timingSummary.violations}</span>
+            </div>
+          </CollapsibleSection>
+
+          {clockDomains.length > 0 && (
+            <CollapsibleSection title="Clock Domains">
+              <table style={s.table}>
+                <thead>
+                  <tr>
+                    <th style={s.th}>Clock</th>
+                    <th style={s.th}>Freq</th>
+                    <th style={s.th}>Period</th>
+                    <th style={s.th}>Slack</th>
+                    <th style={s.th}>Violations</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {clockDomains.map((cd) => (
+                    <tr
+                      key={cd.name}
+                      style={s.hoverRow}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--vscode-list-hoverBackground,#2a2d2e)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                      title={`${cd.name}: ${cd.freq}, slack ${cd.slack}`}
+                    >
+                      <td style={s.td}>{cd.name}</td>
+                      <td style={s.td}>{cd.freq}</td>
+                      <td style={s.td}>{cd.period}</td>
+                      <td style={{ ...s.td, color: cd.violations > 0 ? '#f44747' : '#4ec9b0' }}>{cd.slack}</td>
+                      <td style={s.td}>{cd.violations}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </CollapsibleSection>
+          )}
+        </>
       )}
     </div>
   );

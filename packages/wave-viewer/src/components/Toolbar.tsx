@@ -8,11 +8,11 @@ const btnS: React.CSSProperties = {
   border: '1px solid var(--vscode-panel-border,#3c3c3c)',
   color: 'var(--vscode-editor-foreground,#d4d4d4)',
   padding: '3px 10px',
-  borderRadius: 4,
   cursor: 'pointer',
   fontSize: 12,
   lineHeight: '20px',
   transition: 'background .15s',
+  fontFamily: 'inherit',
 };
 
 const btnActive: React.CSSProperties = {

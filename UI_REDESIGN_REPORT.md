@@ -206,6 +206,23 @@ The following polish items from the initial report have been implemented:
 
 ---
 
+## Recent Polish (2026-07-06)
+
+- **Removed dead code**: Deleted `App.css` (184 lines of stale Vite/R boilerplate that was never imported)
+- **Global CSS improvements**: Thinner scrollbar (6px from 8px), focus-visible outlines on all interactive elements (buttons, inputs, selects, focusable divs), fadeIn animation now has subtle translateY(2px) for polish
+- **DashboardPanel**: Fixed `display:'inlineBlock'` → removed (badge didn't need it), added `alignItems:'center'` to rows for alignment, minHeight on rows for consistent layout
+- **SidebarNav**: Added hover background highlight on inactive nav items using `onMouseEnter`/`onMouseLeave` with `var(--vscode-list-hoverBackground)`
+- **ErrorBoundary**: New component wrapping all panels to prevent cross-panel crashes. Shows "Panel crashed" with error message and retry button
+- **HardwarePanel**: Added resource usage visualization bars (LUTs, FFs, BRAM, DSP) with colored fill; connected to `ghdlVersion` from store
+- **SettingsPanel**: Made Toggle component interactive (uses `useState`); removed duplicate import
+- **TimingPanel**: Added `hasData` check to show EmptyState when no timing data; only shows Clock Domains table when domains exist
+- **ReportsPanel**: Extracted inline badge style to `s.badge` style object for consistency
+- **Toolbar**: Removed `borderRadius: 4` from buttons (consistent with flat/sharp-corner design); added `fontFamily: 'inherit'`
+- **AiAssistantPanel**: Added store import and future-proof `postMessage({ type: 'ai:query' })` call; greeting now references top entity name
+- **ExplorerPanel**: Header now shows file count from store when available
+- **BuildPanel**: Output now falls back to store's `buildState.output` array if populated, otherwise shows mock data
+- **All buttons**: Global `button { fontFamily: 'inherit' }` ensures consistent font across all panels
+
 ## Remaining Polish Opportunities
 
 - Add drag-to-reorder for signal list
@@ -215,3 +232,4 @@ The following polish items from the initial report have been implemented:
 - Add keyboard shortcut reference panel
 - Implement smooth panel resize handles
 - Add panel header context actions (export, collapse all)
+- Wire mock data panels to real backends (Build, Simulation, Explorer, Constraints, Timing, Hardware, Reports)

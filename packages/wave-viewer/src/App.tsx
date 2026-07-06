@@ -11,6 +11,7 @@ import { HardwarePanel } from './components/HardwarePanel';
 import { AiAssistantPanel } from './components/AiAssistantPanel';
 import { ReportsPanel } from './components/ReportsPanel';
 import { SettingsPanel } from './components/SettingsPanel';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { useChronamStore, type PanelId } from './store/useChronamStore';
 import { useWaveStore } from './store/useWaveStore';
 import { postMessage } from './vscode';
@@ -133,7 +134,9 @@ function App() {
           outline: 'none',
         }}
       >
-        <PanelComponent />
+        <ErrorBoundary panelName={activePanel}>
+          <PanelComponent />
+        </ErrorBoundary>
       </div>
     </div>
   );

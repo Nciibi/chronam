@@ -32,6 +32,13 @@ const s: Record<string, React.CSSProperties> = {
   info: { flex: 1 },
   title: { fontSize: 12, color: 'var(--vscode-editor-foreground,#d4d4d4)' },
   meta: { fontSize: 10, color: 'var(--vscode-editor-foreground,#d4d4d4)', opacity: 0.4, marginTop: 2 },
+  badge: {
+    fontSize: 10,
+    padding: '2px 8px',
+    borderRadius: 2,
+    fontWeight: 700,
+    fontFamily: 'inherit',
+  },
 };
 
 const reportList = [
@@ -81,7 +88,7 @@ export function ReportsPanel() {
                 <div style={s.title}>{r.title}</div>
                 <div style={s.meta}>{r.date}</div>
               </div>
-              <span style={{ fontSize:10, padding:'2px 8px', borderRadius:2, background:statusColors[r.status]+'22', color:statusColors[r.status], border:'1px solid '+statusColors[r.status], fontWeight:700, fontFamily:'inherit' }}>
+              <span style={{ ...s.badge, background:statusColors[r.status]+'22', color:statusColors[r.status], border:'1px solid '+statusColors[r.status] }}>
                 {statusIcons[r.status]} {r.status.toUpperCase()}
               </span>
             </div>

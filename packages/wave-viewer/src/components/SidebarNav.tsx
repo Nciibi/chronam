@@ -110,6 +110,8 @@ export function SidebarNav({ onNavigate }: Props) {
             style={{ ...s.item, ...(isActive ? s.active : {}) }}
             onClick={() => setActivePanel(item.id)}
             onKeyDown={(e) => handleKeyDown(e, idx)}
+            onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'var(--vscode-list-hoverBackground,#2a2d2e)'; }}
+            onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
             title={item.label}
           >
             {isActive && <div style={s.indicator} />}

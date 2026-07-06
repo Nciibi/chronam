@@ -107,9 +107,11 @@ export function BuildPanel() {
             <span style={s.stat}>Status: <span style={{ ...s.statVal, textTransform: 'uppercase' }}>{buildState.status}</span></span>
           </div>
           <div style={s.output}>
-            {['> ghdl -a --std=08 counter.vhdl', '> ghdl -e --std=08 counter', '> ghdl -r --std=08 counter --vcd=.chronam/counter.vcd', '  Simulation complete: 8 signals (1000ns simulated)'].map((line, i) => (
-              <div key={i}>{line}</div>
-            ))}
+            {buildState.output.length > 0
+              ? buildState.output.map((line, i) => <div key={i}>{line}</div>)
+              : ['> ghdl -a --std=08 counter.vhdl', '> ghdl -e --std=08 counter', '> ghdl -r --std=08 counter --vcd=.chronam/counter.vcd', '  Simulation complete: 8 signals (1000ns simulated)'].map((line, i) => (
+                <div key={i}>{line}</div>
+              ))}
           </div>
         </>
       )}

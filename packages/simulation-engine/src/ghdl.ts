@@ -103,10 +103,11 @@ export class GHDLAdapter implements SimulatorAdapter {
     let allStderr = '';
 
     for (const source of sources) {
+      const absWorkDir = this.normPath(path.resolve(workDir));
       const args = [
         '-a',
         `--std=${VHDL_STD_MAP[vhdlVersion]}`,
-        '--workdir=.',
+        `--workdir=${absWorkDir}`,
         this.normPath(source),
       ];
 

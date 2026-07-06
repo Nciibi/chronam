@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
+import { useChronamStore } from '../store/useChronamStore';
+import { postMessage } from '../vscode';
 import { LoadingOverlay } from './LoadingOverlay';
 
 const s: Record<string, React.CSSProperties> = {
@@ -93,8 +95,9 @@ const suggestions = [
 ];
 
 export function AiAssistantPanel() {
+  const projectInfo = useChronamStore((s) => s.projectInfo);
   const [messages, setMessages] = useState([
-    { role: 'ai', text: 'Hello! I can help you with VHDL development, testbenches, simulation, and timing analysis. What would you like to know?' },
+    { role: 'ai', text: `Hello! I can help you with VHDL development, testbenches, simulation, and timing analysis. ${projectInfo.topEntity ? `I see you're working on \`${projectInfo.topEntity}\`. ` : ''}What would you like to know?` },
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -109,6 +112,7 @@ export function AiAssistantPanel() {
     setMessages((prev) => [...prev, { role: 'user', text: input }]);
     setInput('');
     setLoading(true);
+    postMessage({ type: 'ai:query', text: input });
     setTimeout(() => {
       setMessages((prev) => [...prev, { role: 'ai', text: 'I understand your question. Let me analyze your design... (AI assistant integration pending)' }]);
       setLoading(false);

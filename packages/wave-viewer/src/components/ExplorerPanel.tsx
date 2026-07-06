@@ -24,7 +24,7 @@ const s: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: 8,
-    padding: '4px 8px',
+    padding: '5px 8px',
     cursor: 'pointer',
     borderRadius: 2,
     transition: 'background .1s',
@@ -47,6 +47,7 @@ const s: Record<string, React.CSSProperties> = {
     background: 'var(--vscode-panel-border,#3c3c3c)',
     color: 'var(--vscode-editor-foreground,#d4d4d4)',
     opacity: 0.6,
+    fontFamily: 'inherit',
   },
 };
 
@@ -65,11 +66,12 @@ const typeIcon: Record<string, string> = {
 };
 
 export function ExplorerPanel() {
+  const projectInfo = useChronamStore((s) => s.projectInfo);
   const setActivePanel = useChronamStore((s) => s.setActivePanel);
 
   return (
     <div style={s.panel}>
-      <div style={s.header}>Project Files</div>
+      <div style={s.header}>Project Files {projectInfo.files > 0 && `(${projectInfo.files})`}</div>
       {mockFiles.length === 0 ? (
         <EmptyState icon="◲" text="No files in project" sub="Open a VHDL file or add files to project" />
       ) : (

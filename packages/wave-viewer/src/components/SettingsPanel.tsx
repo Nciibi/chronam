@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 const s: Record<string, React.CSSProperties> = {
   panel: {
     padding: 8,
@@ -74,10 +76,15 @@ const s: Record<string, React.CSSProperties> = {
   },
 };
 
-function Toggle({ value, title }: { value: boolean; title?: string }) {
+function Toggle({ value: initial, title }: { value: boolean; title?: string }) {
+  const [on, setOn] = useState(initial);
   return (
-    <button title={title || `Toggle ${value ? 'off' : 'on'}`} style={{ ...s.toggle, background: value ? '#0e639c' : '#3c3c3c' }}>
-      <div style={{ ...s.toggleKnob, left: value ? 20 : 2 }} />
+    <button
+      title={title || `Toggle ${on ? 'off' : 'on'}`}
+      style={{ ...s.toggle, background: on ? '#0e639c' : '#3c3c3c' }}
+      onClick={() => setOn((v) => !v)}
+    >
+      <div style={{ ...s.toggleKnob, left: on ? 20 : 2 }} />
     </button>
   );
 }

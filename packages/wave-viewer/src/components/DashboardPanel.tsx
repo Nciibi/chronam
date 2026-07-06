@@ -13,9 +13,11 @@ const s: Record<string, React.CSSProperties> = {
   row: {
     display: 'flex',
     justifyContent: 'space-between',
-    padding: '4px 0',
+    alignItems: 'center',
+    padding: '5px 0',
     borderBottom: '1px solid var(--vscode-panel-border,#3c3c3c)',
     fontSize: 12,
+    minHeight: 26,
   },
   label: {
     color: 'var(--vscode-editor-foreground,#d4d4d4)',
@@ -39,7 +41,6 @@ const s: Record<string, React.CSSProperties> = {
     transition: 'background .12s',
   },
   statusBadge: {
-    display: 'inlineBlock',
     padding: '2px 8px',
     borderRadius: 2,
     fontSize: 10,
