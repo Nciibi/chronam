@@ -1,7 +1,7 @@
 use anyhow::{Result, Context, bail};
-use colored::Colorize;
 use std::path::Path;
 use std::process::Command;
+use std::sync::OnceLock;
 
 #[derive(Debug)]
 pub struct Issue {
@@ -9,6 +9,11 @@ pub struct Issue {
     pub line: u32,
     pub col: u32,
     pub message: String,
+}
+
+fn ghdl_error_re() -> &'static regex_lite::Regex {
+    static RE: OnceLock<regex_lite::Regex> = OnceLock::new();
+    RE.get_or_init(|| regex_lite::Regex::new(r"^(.+?):(\d+):(\d+):\s*(error|warning|note):\s*(.+)$").unwrap())
 }
 
 pub fn is_available() -> bool {
@@ -60,8 +65,16 @@ fn ghdl_std(vhdl_std: &str) -> &str {
         "02" | "2002" => "02",
         "08" | "2008" => "08",
         "19" | "2019" => "19",
-        _ => vhdl_std,
+        other => {
+            eprintln!("warn: unknown VHDL standard '{}', passing through to GHDL", other);
+            other
+        }
     }
+}
+
+fn stderr_first_line(stderr: &[u8]) -> String {
+    let s = String::from_utf8_lossy(stderr);
+    s.lines().find(|l| !l.is_empty()).unwrap_or("(empty stderr)").to_string()
 }
 
 pub fn analyze(source: &Path, work_dir: &Path, vhdl_std: &str) -> Result<(u32, u32)> {
@@ -73,12 +86,10 @@ pub fn analyze(source: &Path, work_dir: &Path, vhdl_std: &str) -> Result<(u32, u
         .arg(&abs_source)
         .current_dir(work_dir)
         .output()
-        .with_context(|| format!("Failed to analyze {}", source.display()))?;
+        .with_context(|| format!("Failed to run GHDL analyze on {}", source.display()))?;
 
     if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        let err_lines: Vec<&str> = stderr.lines().filter(|l| !l.is_empty()).collect();
-        let msg = err_lines.first().unwrap_or(&"analysis failed").to_string();
+        let msg = stderr_first_line(&output.stderr);
         bail!("{}", msg);
     }
 
@@ -97,7 +108,7 @@ pub fn analyze_syntax(source: &Path, work_dir: &Path, vhdl_std: &str) -> Result<
         .arg(&abs_source)
         .current_dir(work_dir)
         .output()
-        .context("Syntax analysis failed")?;
+        .with_context(|| format!("Failed to run GHDL syntax check on {}", source.display()))?;
 
     let stderr = String::from_utf8_lossy(&output.stderr);
     let mut issues = Vec::new();
@@ -120,11 +131,10 @@ pub fn elaborate(entity: &str, work_dir: &Path, vhdl_std: &str) -> Result<(u32, 
         .args(["-e", &std_flag, "--workdir=.", entity])
         .current_dir(work_dir)
         .output()
-        .with_context(|| format!("Failed to elaborate {}", entity))?;
+        .with_context(|| format!("Failed to run GHDL elaborate on {}", entity))?;
 
     if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        let msg = stderr.lines().next().unwrap_or("elaboration failed").to_string();
+        let msg = stderr_first_line(&output.stderr);
         bail!("{}", msg);
     }
 
@@ -137,14 +147,32 @@ pub fn elaborate(entity: &str, work_dir: &Path, vhdl_std: &str) -> Result<(u32, 
 pub fn run(entity: &str, work_dir: &Path, vhdl_std: &str, duration_ns: u64, wave_format: &str) -> Result<Option<String>> {
     let std_flag = format!("--std={}", ghdl_std(vhdl_std));
     let stop_time = format!("--stop-time={}ns", duration_ns);
-    let abs_work_dir = std::path::absolute(work_dir)
+    let abs_work = std::path::absolute(work_dir)
         .unwrap_or_else(|_| work_dir.to_path_buf());
-    let vcd_path = abs_work_dir.join(format!("{}.vcd", entity));
-    let vcd_flag = format!("--vcd={}", vcd_path.display());
 
     let mut args = vec!["-r", &std_flag, "--workdir=.", entity, &stop_time];
-    if wave_format == "vcd" {
-        args.push(&vcd_flag);
+    let wave_path;
+    let wave_flag;
+
+    match wave_format {
+        "vcd" => {
+            wave_path = abs_work.join(format!("{}.vcd", entity));
+            wave_flag = format!("--vcd={}", wave_path.display());
+            args.push(&wave_flag);
+        }
+        "ghw" => {
+            wave_path = abs_work.join(format!("{}.ghw", entity));
+            wave_flag = format!("--wave={}", wave_path.display());
+            args.push(&wave_flag);
+        }
+        "fst" => {
+            wave_path = abs_work.join(format!("{}.fst", entity));
+            wave_flag = format!("--fst={}", wave_path.display());
+            args.push(&wave_flag);
+        }
+        _ => {
+            wave_path = abs_work.join(format!("{}.vcd", entity));
+        }
     }
 
     let output = Command::new(binary_path())
@@ -154,37 +182,34 @@ pub fn run(entity: &str, work_dir: &Path, vhdl_std: &str, duration_ns: u64, wave
         .with_context(|| format!("Failed to run simulation for {}", entity))?;
 
     if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        let msg = stderr.lines().next().unwrap_or("simulation failed").to_string();
+        let msg = stderr_first_line(&output.stderr);
         bail!("{}", msg);
     }
 
-    if vcd_path.exists() {
-        Ok(Some(vcd_path.display().to_string()))
+    if wave_path.exists() {
+        Ok(Some(wave_path.display().to_string()))
     } else {
         Ok(None)
     }
 }
 
-pub fn clean(work_dir: &Path) -> Result<()> {
-    if !work_dir.exists() { return Ok(()); }
+pub fn clean(work_dir: &Path) -> Result<u64> {
+    if !work_dir.exists() { return Ok(0); }
     let mut count = 0u64;
     if let Ok(entries) = std::fs::read_dir(work_dir) {
         for entry in entries.flatten() {
             let path = entry.path();
             if path.is_file() {
                 let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
-                if matches!(ext, "o" | "cf" | "vcd" | "ghw") {
-                    std::fs::remove_file(&path)?;
-                    count += 1;
+                if matches!(ext, "o" | "cf" | "vcd" | "ghw" | "fst") {
+                    if std::fs::remove_file(&path).is_ok() {
+                        count += 1;
+                    }
                 }
             }
         }
     }
-    if count > 0 {
-        eprintln!("  {} Cleaned {} artifact(s)", "[chronam]".dimmed(), count);
-    }
-    Ok(())
+    Ok(count)
 }
 
 struct ParsedError {
@@ -196,8 +221,7 @@ struct ParsedError {
 }
 
 fn parse_ghdl_error(line: &str) -> Option<ParsedError> {
-    let re = regex_lite::Regex::new(r"^(.+?):(\d+):(\d+):\s*(error|warning|note):\s*(.+)$").ok()?;
-    let caps = re.captures(line)?;
+    let caps = ghdl_error_re().captures(line)?;
     Some(ParsedError {
         _file: caps[1].to_string(),
         line: caps[2].parse().unwrap_or(0),
