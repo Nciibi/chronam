@@ -4,13 +4,9 @@ use crate::cli::Cli;
 use crate::output::{step, success, warn, dim};
 
 #[derive(Args, Debug)]
-pub struct CleanArgs {
-    #[arg(long = "all")]
-    pub all: bool,
-}
+pub struct CleanArgs;
 
-pub fn run(args: &CleanArgs, cli: &Cli) -> Result<()> {
-    let _ = args;
+pub fn run(_args: &CleanArgs, cli: &Cli) -> Result<()> {
     let config = crate::project::config::load_config(cli.project.as_deref())?;
     let work_dir = config.project.work_dir();
 
