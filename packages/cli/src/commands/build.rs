@@ -12,11 +12,17 @@ pub struct BuildArgs {
     pub force: bool,
     #[arg(short = 'j', long = "jobs", default_value = "1")]
     pub jobs: u32,
+    #[arg(short = 't', long = "top")]
+    pub top: Option<String>,
+    #[arg(short = 's', long = "std")]
+    pub vhdl_std: Option<String>,
 }
 
 pub fn run(args: &BuildArgs, cli: &Cli) -> Result<()> {
     step("build", "Starting build...");
     let config = crate::project::config::load_config(cli.project.as_deref())?;
+
+    let vhdl_std = args.vhdl_std.as_deref().unwrap_or(&config.build.vhdl_std);
 
     if config.build.sources.is_empty() {
         warn("No source files configured. Add files to [build.sources] in chronam.toml");
@@ -55,7 +61,7 @@ pub fn run(args: &BuildArgs, cli: &Cli) -> Result<()> {
         print!("  {} Analyzing {} ... ", dim("["), highlight(&name));
         std::io::stdout().flush()?;
 
-        match crate::engine::ghdl::analyze(source, &work_dir, &config.build.vhdl_std) {
+        match crate::engine::ghdl::analyze(source, &work_dir, vhdl_std) {
             Ok((e, w)) => {
                 errors += e;
                 warnings += w;
@@ -73,27 +79,29 @@ pub fn run(args: &BuildArgs, cli: &Cli) -> Result<()> {
         }
     }
 
-    if let Some(top) = &config.build.top_entity {
-        if !top.is_empty() {
-            step("elab", &format!("Elaborating {} ...", highlight(top)));
-            match crate::engine::ghdl::elaborate(top, &work_dir, &config.build.vhdl_std) {
-                Ok((e, w)) => {
-                    errors += e;
-                    warnings += w;
-                    if e > 0 {
-                        error_("Elaboration failed");
-                    } else {
-                        success("elab", "Elaboration complete");
-                    }
-                }
-                Err(err) => {
-                    errors += 1;
-                    error_(&format!("Elaboration failed: {}", err));
+    let top = args.top.as_deref()
+        .or(config.build.top_entity.as_deref())
+        .unwrap_or("");
+
+    if !top.is_empty() && errors == 0 {
+        step("elab", &format!("Elaborating {} ...", highlight(top)));
+        match crate::engine::ghdl::elaborate(top, &work_dir, vhdl_std) {
+            Ok((e, w)) => {
+                errors += e;
+                warnings += w;
+                if e > 0 {
+                    error_("Elaboration failed");
+                } else {
+                    success("elab", "Elaboration complete");
                 }
             }
-        } else {
-            warn("No top entity configured. Set [build.top_entity] in chronam.toml");
+            Err(err) => {
+                errors += 1;
+                error_(&format!("Elaboration failed: {}", err));
+            }
         }
+    } else if top.is_empty() {
+        warn("No top entity configured. Set [build.top_entity] in chronam.toml or pass --top");
     }
 
     println!();
