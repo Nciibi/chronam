@@ -87,7 +87,7 @@ pub fn analyze(source: &Path, work_dir: &Path, vhdl_std: &str) -> Result<(u32, u
 }
 
 pub fn analyze_syntax(source: &Path, work_dir: &Path, vhdl_std: &str) -> Result<Vec<Issue>> {
-    let std_flag = format!("--std={}", vhdl_std);
+    let std_flag = format!("--std={}", ghdl_std(vhdl_std));
     let output = Command::new(binary_path())
         .args(["-a", &std_flag, "--workdir=.", "--syntax-only"])
         .arg(source)
@@ -111,7 +111,7 @@ pub fn analyze_syntax(source: &Path, work_dir: &Path, vhdl_std: &str) -> Result<
 }
 
 pub fn elaborate(entity: &str, work_dir: &Path, vhdl_std: &str) -> Result<(u32, u32)> {
-    let std_flag = format!("--std={}", vhdl_std);
+    let std_flag = format!("--std={}", ghdl_std(vhdl_std));
     let output = Command::new(binary_path())
         .args(["-e", &std_flag, "--workdir=.", entity])
         .current_dir(work_dir)
@@ -131,7 +131,7 @@ pub fn elaborate(entity: &str, work_dir: &Path, vhdl_std: &str) -> Result<(u32, 
 }
 
 pub fn run(entity: &str, work_dir: &Path, vhdl_std: &str, duration_ns: u64, wave_format: &str) -> Result<Option<String>> {
-    let std_flag = format!("--std={}", vhdl_std);
+    let std_flag = format!("--std={}", ghdl_std(vhdl_std));
     let stop_time = format!("--stop-time={}ns", duration_ns);
     let vcd_path = work_dir.join(format!("{}.vcd", entity));
     let vcd_flag = format!("--vcd={}", vcd_path.display());
