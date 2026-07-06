@@ -1,6 +1,6 @@
 -- Auto-generated testbench by Chronam
 -- Entity: counter
--- Generated: 2026-07-06T00:30:59.913Z
+-- Generated: 2026-07-06T00:32:02.971Z
 
 library ieee;
 use ieee.std_logic_1164.all;
