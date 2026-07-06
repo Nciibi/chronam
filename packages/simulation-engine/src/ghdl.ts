@@ -138,10 +138,11 @@ export class GHDLAdapter implements SimulatorAdapter {
   }
 
   async elaborate(topEntity: string, workDir: string, vhdlVersion: VHDLVersion = '2008', onStderr?: (line: string) => void): Promise<CompileResult> {
+    const absWorkDir = this.normPath(path.resolve(workDir));
     const args = [
       '-e',
       `--std=${VHDL_STD_MAP[vhdlVersion]}`,
-      '--workdir=.',
+      `--workdir=${absWorkDir}`,
       topEntity,
     ];
 
@@ -169,10 +170,11 @@ export class GHDLAdapter implements SimulatorAdapter {
     const startTime = Date.now();
     const waveFile = path.join(workDir, `${topEntity}.vcd`);
 
+    const absWorkDir = this.normPath(path.resolve(workDir));
     const args = [
       '-r',
       `--std=${VHDL_STD_MAP[vhdlVersion]}`,
-      '--workdir=.',
+      `--workdir=${absWorkDir}`,
       topEntity,
       `--stop-time=${config.durationNs}ns`,
     ];
