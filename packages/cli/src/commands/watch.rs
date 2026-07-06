@@ -52,6 +52,8 @@ pub fn run(args: &WatchArgs, cli: &Cli) -> Result<()> {
                 files: vec![],
                 force: false,
                 jobs: 1,
+                top: None,
+                vhdl_std: None,
             };
             if let Err(e) = super::build::run(&build_args, cli) {
                 warn(&format!("Build error: {}", e));

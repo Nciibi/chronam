@@ -9,7 +9,7 @@ pub struct CleanArgs {
     pub all: bool,
 }
 
-pub fn run(args: &CleanArgs, cli: &Cli) -> Result<()> {
+pub fn run(_args: &CleanArgs, cli: &Cli) -> Result<()> {
     let config = crate::project::config::load_config(cli.project.as_deref())?;
     let work_dir = config.project.work_dir();
 
