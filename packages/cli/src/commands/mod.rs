@@ -1,0 +1,12 @@
+pub mod build;
+pub mod clean;
+pub mod compile;
+pub mod completion;
+pub mod doctor;
+pub mod help;
+pub mod info;
+pub mod lint;
+pub mod new;
+pub mod simulate;
+pub mod test;
+pub mod watch;

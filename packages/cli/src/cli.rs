@@ -1,8 +1,7 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand, command};
 
-include!("./output/mod.rs");
-include!("./commands/mod.rs");
+use crate::commands;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -62,7 +61,7 @@ pub enum Commands {
     Watch(watch::WatchArgs),
 
     /// Run tests
-    #[command(aliases = &["t", "test"])]
+    #[command(aliases = &["t", "testv"])]
     Test(test::TestArgs),
 
     /// Generate shell completions
