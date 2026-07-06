@@ -1,7 +1,11 @@
 use anyhow::Result;
-use clap::{Parser, Subcommand, command};
+use clap::{Parser, Subcommand};
+use clap::CommandFactory;
 
-use crate::commands;
+
+
+#[derive(clap::Args, Debug)]
+pub struct HelpArgs;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -11,88 +15,75 @@ use crate::commands;
     version,
     propagate_version = true,
     args_conflicts_with_subcommands = false,
+    disable_help_subcommand = true,
     styles = cli_styles(),
 )]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
 
-    /// Enable verbose output
     #[arg(short = 'v', long = "verbose", global = true, help = "Enable verbose output")]
     pub verbose: bool,
 
-    /// Path to chronam.toml project file
     #[arg(short = 'p', long = "project", global = true, help = "Path to chronam.toml project file")]
     pub project: Option<String>,
 }
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
-    /// Create a new VHDL project
     #[command(aliases = &["n", "create"])]
-    New(new::NewArgs),
+    New(crate::commands::new::NewArgs),
 
-    /// Build the current project
     #[command(aliases = &["b", "make"])]
-    Build(build::BuildArgs),
+    Build(crate::commands::build::BuildArgs),
 
-    /// Run simulation
     #[command(aliases = &["sim", "run"])]
-    Simulate(simulate::SimulateArgs),
+    Simulate(crate::commands::simulate::SimulateArgs),
 
-    /// Analyze and lint VHDL sources
     #[command(aliases = &["l", "check"])]
-    Lint(lint::LintArgs),
+    Lint(crate::commands::lint::LintArgs),
 
-    /// Clean build artifacts
     #[command(aliases = &["c", "cl"])]
-    Clean(clean::CleanArgs),
+    Clean(crate::commands::clean::CleanArgs),
 
-    /// Run diagnostics on the environment
     #[command(aliases = &["diag", "checkup"])]
-    Doctor(doctor::DoctorArgs),
+    Doctor(crate::commands::doctor::DoctorArgs),
 
-    /// Compile the design without simulation
     #[command(aliases = &["comp"])]
-    Compile(compile::CompileArgs),
+    Compile(crate::commands::compile::CompileArgs),
 
-    /// Watch project and auto-rebuild on changes
     #[command(aliases = &["w", "monitor"])]
-    Watch(watch::WatchArgs),
+    Watch(crate::commands::watch::WatchArgs),
 
-    /// Run tests
     #[command(aliases = &["t", "testv"])]
-    Test(test::TestArgs),
+    Test(crate::commands::test::TestArgs),
 
-    /// Generate shell completions
     #[command(aliases = &["completions"])]
-    Completion(completion::CompletionArgs),
+    Completion(crate::commands::completion::CompletionArgs),
 
-    /// Show information about the current project
-    Info(info::InfoArgs),
+    Info(crate::commands::info::InfoArgs),
 
-    /// Print this help message
     #[command(aliases = &["h", "?"])]
-    Help(help::HelpArgs),
+    Help(HelpArgs),
 }
 
 impl Cli {
     pub fn run(&self) -> Result<()> {
+        use crate::commands::*;
         match &self.command {
-            Commands::New(args) => commands::new::run(args, self),
-            Commands::Build(args) => commands::build::run(args, self),
-            Commands::Simulate(args) => commands::simulate::run(args, self),
-            Commands::Lint(args) => commands::lint::run(args, self),
-            Commands::Clean(args) => commands::clean::run(args, self),
-            Commands::Doctor(args) => commands::doctor::run(args, self),
-            Commands::Compile(args) => commands::compile::run(args, self),
-            Commands::Watch(args) => commands::watch::run(args, self),
-            Commands::Test(args) => commands::test::run(args, self),
-            Commands::Completion(args) => commands::completion::run(args, self),
-            Commands::Info(args) => commands::info::run(args, self),
+            Commands::New(args) => new::run(args, self),
+            Commands::Build(args) => build::run(args, self),
+            Commands::Simulate(args) => simulate::run(args, self),
+            Commands::Lint(args) => lint::run(args, self),
+            Commands::Clean(args) => clean::run(args, self),
+            Commands::Doctor(args) => doctor::run(args, self),
+            Commands::Compile(args) => compile::run(args, self),
+            Commands::Watch(args) => watch::run(args, self),
+            Commands::Test(args) => test::run(args, self),
+            Commands::Completion(args) => completion::run(args, self),
+            Commands::Info(args) => info::run(args, self),
             Commands::Help(_) => {
-                use clap::CommandFactory;
-                <Cli as clap::Parser>::command().print_help()?;
+                <Cli as CommandFactory>::command().print_help()?;
                 println!();
                 Ok(())
             }
@@ -101,7 +92,7 @@ impl Cli {
 }
 
 pub fn cli_styles() -> clap::builder::Styles {
-    use clap::builder::styling::{AnsiColor, Effects, Style};
+    use clap::builder::styling::{AnsiColor, Style};
     clap::builder::Styles::styled()
         .header(Style::new().bold().fg_color(Some(AnsiColor::Cyan.into())))
         .usage(Style::new().bold().fg_color(Some(AnsiColor::Cyan.into())))

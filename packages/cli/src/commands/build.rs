@@ -1,30 +1,21 @@
 use anyhow::Result;
 use clap::Args;
-use crate::Cli;
+use colored::Colorize;
+use std::io::Write;
+use crate::cli::Cli;
 use crate::output::{step, success, error_, warn, highlight, dim};
-use crate::engine::ghdl;
 
 #[derive(Args, Debug)]
 pub struct BuildArgs {
-    /// Specific source files to build (default: all from chronam.toml)
     pub files: Vec<String>,
-
-    /// Rebuild from scratch
     #[arg(short = 'f', long = "force")]
     pub force: bool,
-
-    /// Number of parallel jobs
     #[arg(short = 'j', long = "jobs", default_value = "1")]
     pub jobs: u32,
 }
 
 pub fn run(args: &BuildArgs, cli: &Cli) -> Result<()> {
-    let _ = args;
-    let _ = cli;
-
     step("build", "Starting build...");
-
-    // Load project config
     let config = crate::project::config::load_config(cli.project.as_deref())?;
 
     if config.build.sources.is_empty() {
@@ -32,9 +23,7 @@ pub fn run(args: &BuildArgs, cli: &Cli) -> Result<()> {
         return Ok(());
     }
 
-    // Resolve source files from glob patterns
     let sources = crate::project::config::resolve_sources(&config.build.sources)?;
-
     if sources.is_empty() {
         warn("No VHDL source files found matching the configured patterns");
         return Ok(());
@@ -42,22 +31,20 @@ pub fn run(args: &BuildArgs, cli: &Cli) -> Result<()> {
 
     step("build", &format!("Found {} source file(s)", sources.len()));
 
-    // Check if GHDL is available
-    if !ghdl::is_available() {
+    if !crate::engine::ghdl::is_available() {
         error_("GHDL not found. Install GHDL or add it to your PATH.");
         return Ok(());
     }
 
-    let version = ghdl::version()?;
+    let version = crate::engine::ghdl::version()?;
     step("ghdl", &format!("GHDL {} detected", version));
 
-    // Analyze each source file
     let work_dir = config.project.work_dir();
     std::fs::create_dir_all(&work_dir)?;
 
     if args.force {
         step("build", "Forcing full rebuild...");
-        ghdl::clean(&work_dir)?;
+        crate::engine::ghdl::clean(&work_dir)?;
     }
 
     let mut errors = 0;
@@ -68,29 +55,28 @@ pub fn run(args: &BuildArgs, cli: &Cli) -> Result<()> {
         print!("  {} Analyzing {} ... ", dim("["), highlight(&name));
         std::io::stdout().flush()?;
 
-        match ghdl::analyze(source, &work_dir, &config.build.vhdl_std) {
+        match crate::engine::ghdl::analyze(source, &work_dir, &config.build.vhdl_std) {
             Ok((e, w)) => {
                 errors += e;
                 warnings += w;
                 if e > 0 {
-                    println!("{}", colored::Colorize::red("FAIL").bold());
+                    println!("{}", "FAIL".red().bold());
                 } else {
-                    println!("{}", colored::Colorize::green("ok").bold());
+                    println!("{}", "ok".green().bold());
                 }
             }
             Err(err) => {
                 errors += 1;
-                println!("{}", colored::Colorize::red("FAIL").bold());
+                println!("{}", "FAIL".red().bold());
                 error_(&format!("  {}", err));
             }
         }
     }
 
-    // Elaborate top entity
     if let Some(top) = &config.build.top_entity {
         if !top.is_empty() {
             step("elab", &format!("Elaborating {} ...", highlight(top)));
-            match ghdl::elaborate(top, &work_dir, &config.build.vhdl_std) {
+            match crate::engine::ghdl::elaborate(top, &work_dir, &config.build.vhdl_std) {
                 Ok((e, w)) => {
                     errors += e;
                     warnings += w;
@@ -110,28 +96,24 @@ pub fn run(args: &BuildArgs, cli: &Cli) -> Result<()> {
         }
     }
 
-    // Summary
     println!();
     let status = if errors > 0 {
-        colored::Colorize::red("FAILED").bold().to_string()
+        "FAILED".red().bold().to_string()
     } else {
-        colored::Colorize::green("SUCCESS").bold().to_string()
+        "SUCCESS".green().bold().to_string()
     };
     println!(
         "  {}  {}  |  {}  {}  |  {} {}",
         dim("build:"),
         status,
-        colored::Colorize::red(&format!("{} error(s)", errors)),
+        format!("{} error(s)", errors).red(),
         dim("|"),
-        colored::Colorize::yellow(&format!("{} warning(s)", warnings)),
+        format!("{} warning(s)", warnings).yellow(),
         dim(&format!("({} file(s))", sources.len()))
     );
 
     if errors > 0 {
         std::process::exit(1);
     }
-
     Ok(())
 }
-
-use std::io::Write;

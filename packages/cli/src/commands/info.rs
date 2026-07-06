@@ -1,8 +1,7 @@
 use anyhow::Result;
 use clap::Args;
-use colored::Colorize;
-use comfy_table::{Table, Cell, CellAlignment, Color as TableColor};
-use crate::Cli;
+use comfy_table::{Table, Cell, Color as TableColor};
+use crate::cli::Cli;
 use crate::output::{step, highlight, dim};
 
 #[derive(Args, Debug)]
@@ -38,7 +37,7 @@ pub fn run(_args: &InfoArgs, cli: &Cli) -> Result<()> {
         Cell::new(config.build.top_entity.as_deref().unwrap_or("(not set)")),
     ]);
     table.add_row(vec![
-        Cell::new("Source Files"),
+        Cell::new("Source Patterns"),
         Cell::new(&format!("{} pattern(s)", config.build.sources.len())),
     ]);
     table.add_row(vec![
@@ -57,7 +56,6 @@ pub fn run(_args: &InfoArgs, cli: &Cli) -> Result<()> {
     println!("{}", table);
     println!();
 
-    // Count actual source files
     let sources = crate::project::config::resolve_sources(&config.build.sources)?;
     println!("  {} {} {} source file(s) found", dim("·"), highlight(&sources.len().to_string()), dim("matching patterns"));
 

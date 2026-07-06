@@ -1,14 +1,12 @@
 use anyhow::Result;
 use clap::Args;
-use crate::Cli;
-use crate::output::{step, warn, error_, highlight, dim, table};
+use colored::Colorize;
+use crate::cli::Cli;
+use crate::output::{step, error_, highlight, dim};
 
 #[derive(Args, Debug)]
 pub struct LintArgs {
-    /// Specific files to lint
     pub files: Vec<String>,
-
-    /// VHDL standard to use
     #[arg(short = 's', long = "std", default_value = "2008")]
     pub vhdl_std: String,
 }
@@ -22,7 +20,6 @@ pub fn run(args: &LintArgs, cli: &Cli) -> Result<()> {
     };
 
     step("lint", &format!("Analyzing {} file(s)...", sources.len()));
-
     let work_dir = config.project.work_dir();
     let mut has_errors = false;
 
@@ -36,8 +33,8 @@ pub fn run(args: &LintArgs, cli: &Cli) -> Result<()> {
                     has_errors = true;
                     println!("  {} {}  {}", dim("✗"), highlight(&name), dim(&format!("{} issue(s)", issues.len())));
                     for issue in &issues {
-                        let icon = if issue.severity == "error" { colored::Colorize::red("error") } else { colored::Colorize::yellow("warn") };
-                        println!("    {}:{}:{} {} {}", dim(&source.display()), issue.line, issue.col, icon, issue.message);
+                        let icon = if issue.severity == "error" { "error".red() } else { "warn".yellow() };
+                        println!("    {}:{}:{} {} {}", dim(&source.display().to_string()), issue.line, issue.col, icon, issue.message);
                     }
                 }
             }
@@ -53,6 +50,5 @@ pub fn run(args: &LintArgs, cli: &Cli) -> Result<()> {
     } else {
         step("lint", "All files pass linting");
     }
-
     Ok(())
 }

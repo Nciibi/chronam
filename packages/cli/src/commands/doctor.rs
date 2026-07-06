@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::Args;
 use colored::Colorize;
-use crate::Cli;
+use crate::cli::Cli;
 use crate::output::{step, success, error_, warn, highlight, dim};
 
 #[derive(Args, Debug)]
@@ -11,7 +11,7 @@ pub fn run(_args: &DoctorArgs, _cli: &Cli) -> Result<()> {
     step("doctor", "Running environment diagnostics...");
     println!();
 
-    let checks: Vec<(&str, CheckFn)> = vec![
+    let checks: Vec<(&str, fn() -> Result<String, String>)> = vec![
         ("GHDL", check_ghdl),
         ("VHDL Standard", check_vhdl_std),
         ("Project Config", check_project_config),
@@ -19,34 +19,25 @@ pub fn run(_args: &DoctorArgs, _cli: &Cli) -> Result<()> {
         ("Make", check_make),
     ];
 
-    let mut all_pass = true;
     let mut results: Vec<(&str, &str, String)> = Vec::new();
 
     for (name, check) in &checks {
         match check() {
-            Ok(msg) => {
-                results.push((name, "pass", msg));
-                all_pass = false; // not all pass
-            }
-            Err(msg) => {
-                results.push((name, "fail", msg));
-                all_pass = true; // just for logic...
-            }
+            Ok(msg) => results.push((name, "pass", msg)),
+            Err(msg) => results.push((name, "fail", msg)),
         }
     }
-    
-    // Actually use the variable
+
     for (name, status, msg) in &results {
         let status_str = match *status {
-            "pass" => colored::Colorize::green("PASS").bold().to_string(),
-            "warn" => colored::Colorize::yellow("WARN").bold().to_string(),
-            "fail" => colored::Colorize::red("FAIL").bold().to_string(),
+            "pass" => "PASS".green().bold().to_string(),
+            "warn" => "WARN".yellow().bold().to_string(),
+            "fail" => "FAIL".red().bold().to_string(),
             _ => status.to_string(),
         };
         println!("  {}  {}  {}", status_str, highlight(name), dim(msg));
     }
 
-    // Recalculate
     let has_fail = results.iter().any(|(_, s, _)| *s == "fail");
     let has_warn = results.iter().any(|(_, s, _)| *s == "warn");
 
@@ -57,14 +48,11 @@ pub fn run(_args: &DoctorArgs, _cli: &Cli) -> Result<()> {
     } else if has_warn {
         warn("All checks passed with warnings.");
     } else {
-        success("doctor", "All checks passed — environment is ready.");
-        let _ = all_pass;
+        success("doctor", "All checks passed \u{2014} environment is ready.");
     }
 
     Ok(())
 }
-
-type CheckFn = fn() -> Result<String, String>;
 
 fn check_ghdl() -> Result<String, String> {
     let available = crate::engine::ghdl::is_available();
@@ -74,13 +62,12 @@ fn check_ghdl() -> Result<String, String> {
             Err(_) => Ok("GHDL found (version unknown)".into()),
         }
     } else {
-        Err("GHDL not found on PATH. Install from https://github.com/ghdl/ghdl".into())
+        Err("GHDL not found on PATH".into())
     }
 }
 
 fn check_vhdl_std() -> Result<String, String> {
-    let available = crate::engine::ghdl::is_available();
-    if available {
+    if crate::engine::ghdl::is_available() {
         Ok("VHDL-2008 supported (via GHDL)".into())
     } else {
         Err("Cannot check VHDL standard support (GHDL not found)".into())
@@ -88,8 +75,7 @@ fn check_vhdl_std() -> Result<String, String> {
 }
 
 fn check_project_config() -> Result<String, String> {
-    let cwd = std::env::current_dir().unwrap_or_default();
-    let toml = cwd.join("chronam.toml");
+    let toml = std::env::current_dir().unwrap_or_default().join("chronam.toml");
     if toml.exists() {
         Ok("chronam.toml found".into())
     } else {

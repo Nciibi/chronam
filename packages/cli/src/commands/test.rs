@@ -1,22 +1,17 @@
 use anyhow::Result;
 use clap::Args;
-use crate::Cli;
+use colored::Colorize;
+use std::io::Write;
+use crate::cli::Cli;
 use crate::output::{step, success, error_, warn, highlight, dim};
 
 #[derive(Args, Debug)]
 pub struct TestArgs {
-    /// Specific test entity to run
     pub entity: Option<String>,
-
-    /// Test duration in nanoseconds
     #[arg(short = 'd', long = "duration", default_value = "1000")]
     pub duration_ns: u64,
-
-    /// VHDL standard
     #[arg(short = 's', long = "std", default_value = "2008")]
     pub vhdl_std: String,
-
-    /// Verbose test output
     #[arg(short = 'v', long = "verbose")]
     pub verbose: bool,
 }
@@ -25,7 +20,6 @@ pub fn run(args: &TestArgs, cli: &Cli) -> Result<()> {
     let config = crate::project::config::load_config(cli.project.as_deref())?;
     let sources = crate::project::config::resolve_sources(&config.build.sources)?;
 
-    // Find testbench files (tb_* or *_tb)
     let testbenches: Vec<_> = sources.iter()
         .filter(|s| {
             let name = s.file_stem().and_then(|n| n.to_str()).unwrap_or("");
@@ -45,10 +39,8 @@ pub fn run(args: &TestArgs, cli: &Cli) -> Result<()> {
     };
 
     step("test", &format!("Running {} test(s)...", entities.len()));
-
     let work_dir = config.project.work_dir();
 
-    // Analyze all sources
     for source in &sources {
         crate::engine::ghdl::analyze(source, &work_dir, &args.vhdl_std)?;
     }
@@ -64,18 +56,18 @@ pub fn run(args: &TestArgs, cli: &Cli) -> Result<()> {
             Ok((_, _)) => {
                 match crate::engine::ghdl::run(entity, &work_dir, &args.vhdl_std, args.duration_ns, "vcd") {
                     Ok(_) => {
-                        println!("{}", colored::Colorize::green("PASS").bold());
+                        println!("{}", "PASS".green().bold());
                         passed += 1;
                     }
                     Err(e) => {
-                        println!("{}", colored::Colorize::red("FAIL").bold());
+                        println!("{}", "FAIL".red().bold());
                         if args.verbose { error_(&format!("  {}", e)); }
                         failed += 1;
                     }
                 }
             }
             Err(e) => {
-                println!("{} {}", colored::Colorize::red("FAIL").bold(), dim(&format!("({})", e)));
+                println!("{} {}", "FAIL".red().bold(), dim(&format!("({})", e)));
                 failed += 1;
             }
         }
@@ -88,8 +80,5 @@ pub fn run(args: &TestArgs, cli: &Cli) -> Result<()> {
     } else {
         success("test", &format!("All {}/{} test(s) passed", passed, entities.len()));
     }
-
     Ok(())
 }
-
-use std::io::Write;

@@ -1,6 +1,8 @@
 use anyhow::{Result, Context};
+use colored::Colorize;
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
+use std::collections::HashSet;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectConfig {
@@ -22,7 +24,7 @@ pub struct ProjectSection {
     pub version: String,
     #[serde(default = "default_vhdl_std")]
     pub vhdl_std: String,
-    #[serde(default = "default_work_dir")]
+    #[serde(default)]
     pub work_dir: Option<String>,
 }
 
@@ -87,11 +89,6 @@ impl Default for TimingSection {
     }
 }
 
-impl ProjectConfig {
-    pub fn work_dir(&self) -> PathBuf {
-        self.project.work_dir()
-    }
-}
 
 impl ProjectSection {
     pub fn work_dir(&self) -> PathBuf {
@@ -102,32 +99,12 @@ impl ProjectSection {
     }
 }
 
-fn default_version() -> String {
-    "0.1.0".into()
-}
+fn default_version() -> String { "0.1.0".into() }
+fn default_vhdl_std() -> String { "2008".into() }
+fn default_sources() -> Vec<String> { vec!["src/**/*.vhd".into(), "src/**/*.vhdl".into()] }
+fn default_duration() -> u64 { 1000 }
+fn default_wave_format() -> String { "vcd".into() }
 
-fn default_vhdl_std() -> String {
-    "2008".into()
-}
-
-fn default_work_dir() -> Option<String> {
-    None
-}
-
-fn default_sources() -> Vec<String> {
-    vec!["src/**/*.vhd".into(), "src/**/*.vhdl".into()]
-}
-
-fn default_duration() -> u64 {
-    1000
-}
-
-fn default_wave_format() -> String {
-    "vcd".into()
-}
-
-/// Load project configuration from chronam.toml.
-/// If no path is given, searches the current directory and parents.
 pub fn load_config(path: Option<&str>) -> Result<ProjectConfig> {
     let config_path = if let Some(p) = path {
         PathBuf::from(p)
@@ -145,10 +122,9 @@ pub fn load_config(path: Option<&str>) -> Result<ProjectConfig> {
 }
 
 fn find_project_config() -> Result<PathBuf> {
-    let cwd = std::env::current_dir()
-        .context("Cannot determine current directory")?;
-
+    let cwd = std::env::current_dir().context("Cannot determine current directory")?;
     let mut dir = Some(cwd.as_path());
+
     while let Some(d) = dir {
         let candidate = d.join("chronam.toml");
         if candidate.exists() {
@@ -157,7 +133,6 @@ fn find_project_config() -> Result<PathBuf> {
         dir = d.parent();
     }
 
-    // Return default config when no project file found
     let config = ProjectConfig {
         project: ProjectSection {
             name: "unnamed".into(),
@@ -170,7 +145,6 @@ fn find_project_config() -> Result<PathBuf> {
         devices: DevicesSection::default(),
         timing: TimingSection::default(),
     };
-    // Write it
     let toml_str = toml::to_string_pretty(&config)?;
     let path = cwd.join("chronam.toml");
     std::fs::write(&path, &toml_str)?;
@@ -178,10 +152,9 @@ fn find_project_config() -> Result<PathBuf> {
     Ok(path)
 }
 
-/// Resolve glob patterns to actual file paths
 pub fn resolve_sources(patterns: &[String]) -> Result<Vec<PathBuf>> {
     let mut files: Vec<PathBuf> = Vec::new();
-    let mut seen: std::collections::HashSet<PathBuf> = std::collections::HashSet::new();
+    let mut seen: HashSet<PathBuf> = HashSet::new();
 
     for pattern in patterns {
         let entries = glob::glob(pattern)
@@ -195,14 +168,11 @@ pub fn resolve_sources(patterns: &[String]) -> Result<Vec<PathBuf>> {
                     }
                 }
                 Err(e) => {
-                    eprintln!("  {} {}", "[warn]".yellow().bold(), e);
+                    anyhow::bail!("Glob error: {}", e);
                 }
             }
         }
     }
-
     files.sort();
     Ok(files)
 }
-
-use colored::Colorize;

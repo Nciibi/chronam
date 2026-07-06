@@ -1,16 +1,15 @@
 use anyhow::Result;
 use clap::Args;
 use std::time::Duration;
-use crate::Cli;
+
+use std::collections::{HashMap, HashSet};
+use crate::cli::Cli;
 use crate::output::{step, success, warn, highlight, dim};
 
 #[derive(Args, Debug)]
 pub struct WatchArgs {
-    /// Debounce interval in milliseconds
     #[arg(short = 'd', long = "debounce", default_value = "200")]
     pub debounce_ms: u64,
-
-    /// Command to run on changes (default: build)
     pub command: Vec<String>,
 }
 
@@ -20,20 +19,19 @@ pub fn run(args: &WatchArgs, cli: &Cli) -> Result<()> {
 
     let dirs: Vec<_> = sources.iter()
         .filter_map(|s| s.parent())
-        .collect::<std::collections::HashSet<_>>()
+        .collect::<HashSet<_>>()
         .into_iter()
         .collect();
 
     step("watch", &format!("Watching {} director(ies) for changes...", dirs.len()));
-    println!("  {} {} | {} {} | {} {}",
+    println!("  {} {} | {} {} | {} {} {} {}",
         dim("debounce:"), highlight(&format!("{}ms", args.debounce_ms)),
         dim("sources:"), highlight(&format!("{}", sources.len())),
-        dim("press"), highlight("Ctrl+C"), dim("to stop"),
+        dim("press"), highlight("Ctrl+C"), dim("to stop"), ""
     );
     println!();
 
-    // Simple polling-based file watcher
-    let mut last_mtimes: std::collections::HashMap<std::path::PathBuf, std::time::SystemTime> = std::collections::HashMap::new();
+    let mut last_mtimes: HashMap<std::path::PathBuf, std::time::SystemTime> = HashMap::new();
 
     loop {
         let mut changed = false;

@@ -1,11 +1,10 @@
 use anyhow::Result;
 use clap::Args;
-use crate::Cli;
+use crate::cli::Cli;
 use crate::output::{step, success, warn, dim};
 
 #[derive(Args, Debug)]
 pub struct CleanArgs {
-    /// Also remove the VCD waveform files
     #[arg(long = "all")]
     pub all: bool,
 }
@@ -17,7 +16,7 @@ pub fn run(args: &CleanArgs, cli: &Cli) -> Result<()> {
     step("clean", "Cleaning build artifacts...");
 
     if !work_dir.exists() {
-        warn("No build directory found — nothing to clean.");
+        warn("No build directory found \u{2014} nothing to clean.");
         return Ok(());
     }
 

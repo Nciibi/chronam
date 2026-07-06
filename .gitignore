@@ -1,10 +1,26 @@
+# Dependencies
 node_modules/
+
+# Build outputs
 dist/
 out/
-*.vsix
-.waveforge/
+target/
+
+# IDE work directory
+.chronam/
+
+# Simulation artifacts
 *.vcd
 *.ghw
 *.cf
 *.o
+
+# VS Code extension
+*.vsix
+
+# Tooling
 .turbo/
+
+# OS
+Thumbs.db
+.DS_Store
