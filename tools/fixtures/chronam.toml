@@ -1,0 +1,12 @@
+[project]
+name = "fixtures"
+version = "0.1.0"
+vhdl_std = "2008"
+
+[build]
+sources = ["*.vhd", "*.vhdl"]
+top_entity = "counter"
+
+[simulation]
+duration_ns = 1000
+wave_format = "vcd"
