@@ -53,8 +53,19 @@ pub fn version() -> Result<String> {
     Ok(version)
 }
 
+fn ghdl_std(vhdl_std: &str) -> &str {
+    match vhdl_std {
+        "87" | "1987" => "87",
+        "93" | "1993" => "93",
+        "02" | "2002" => "02",
+        "08" | "2008" => "08",
+        "19" | "2019" => "19",
+        _ => vhdl_std,
+    }
+}
+
 pub fn analyze(source: &Path, work_dir: &Path, vhdl_std: &str) -> Result<(u32, u32)> {
-    let std_flag = format!("--std={}", vhdl_std);
+    let std_flag = format!("--std={}", ghdl_std(vhdl_std));
     let output = Command::new(binary_path())
         .args(["-a", &std_flag, "--workdir=."])
         .arg(source)
