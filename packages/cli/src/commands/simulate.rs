@@ -31,7 +31,7 @@ pub fn run(args: &SimulateArgs, cli: &Cli) -> Result<()> {
     step("sim", &format!("Starting simulation of {} ...", highlight(top)));
 
     if !crate::engine::ghdl::is_available() {
-        error_("GHDL not found");
+        error_("GHDL not found. Install GHDL or add it to your PATH.");
         return Ok(());
     }
 
@@ -57,7 +57,13 @@ pub fn run(args: &SimulateArgs, cli: &Cli) -> Result<()> {
     }
 
     step("sim", &format!("Elaborating {} ...", highlight(top)));
-    crate::engine::ghdl::elaborate(top, &work_dir, &config.build.vhdl_std)?;
+    match crate::engine::ghdl::elaborate(top, &work_dir, &config.build.vhdl_std) {
+        Ok((_, _)) => {},
+        Err(e) => {
+            error_(&format!("Elaboration failed: {}", e));
+            return Ok(());
+        }
+    }
 
     step("sim", "Running simulation...");
     match crate::engine::ghdl::run(top, &work_dir, &config.build.vhdl_std, args.duration_ns, &args.wave_format) {
