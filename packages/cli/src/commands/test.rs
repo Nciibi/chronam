@@ -12,8 +12,8 @@ pub struct TestArgs {
     pub duration_ns: u64,
     #[arg(short = 's', long = "std", default_value = "2008")]
     pub vhdl_std: String,
-    #[arg(short = 'v', long = "verbose")]
-    pub verbose: bool,
+    #[arg(short = 'w', long = "wave", default_value = "vcd")]
+    pub wave_format: String,
 }
 
 pub fn run(args: &TestArgs, cli: &Cli) -> Result<()> {
@@ -54,14 +54,18 @@ pub fn run(args: &TestArgs, cli: &Cli) -> Result<()> {
 
         match crate::engine::ghdl::elaborate(entity, &work_dir, &args.vhdl_std) {
             Ok((_, _)) => {
-                match crate::engine::ghdl::run(entity, &work_dir, &args.vhdl_std, args.duration_ns, "vcd") {
-                    Ok(_) => {
+                match crate::engine::ghdl::run(entity, &work_dir, &args.vhdl_std, args.duration_ns, &args.wave_format) {
+                    Ok(Some(wave_path)) => {
+                        println!("{} {}", "PASS".green().bold(), dim(&format!("({})", wave_path)));
+                        passed += 1;
+                    }
+                    Ok(None) => {
                         println!("{}", "PASS".green().bold());
                         passed += 1;
                     }
                     Err(e) => {
                         println!("{}", "FAIL".red().bold());
-                        if args.verbose { error_(&format!("  {}", e)); }
+                        if cli.verbose { error_(&format!("  {}", e)); }
                         failed += 1;
                     }
                 }
