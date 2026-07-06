@@ -3,7 +3,7 @@ use clap::CommandFactory;
 use clap_complete::Shell;
 use std::io;
 use crate::cli::Cli;
-use crate::output::{step, success, highlight, dim};
+use crate::output::{step, success, error_, highlight, dim};
 
 #[derive(clap::Args, Debug)]
 pub struct CompletionArgs {
@@ -19,7 +19,7 @@ pub fn run(args: &CompletionArgs, _cli: &Cli) -> Result<()> {
         "powershell" | "pwsh" => Shell::PowerShell,
         "elvish" => Shell::Elvish,
         _ => {
-            eprintln!("Unsupported shell '{}'. Supported: bash, zsh, fish, powershell, elvish", shell_name);
+            error_(&format!("Unsupported shell '{}'. Supported: bash, zsh, fish, powershell, elvish", shell_name));
             std::process::exit(1);
         }
     };
