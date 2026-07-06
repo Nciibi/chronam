@@ -14,6 +14,8 @@ pub struct CompileArgs {
     pub vhdl_std: String,
     #[arg(short = 'f', long = "force")]
     pub force: bool,
+    #[arg(short = 'j', long = "jobs", default_value = "1")]
+    pub jobs: u32,
 }
 
 pub fn run(args: &CompileArgs, cli: &Cli) -> Result<()> {
@@ -27,7 +29,7 @@ pub fn run(args: &CompileArgs, cli: &Cli) -> Result<()> {
     step("comp", &format!("Compiling {} file(s)...", sources.len()));
 
     if !crate::engine::ghdl::is_available() {
-        error_("GHDL not found");
+        error_("GHDL not found. Install GHDL or add it to your PATH.");
         return Ok(());
     }
 
