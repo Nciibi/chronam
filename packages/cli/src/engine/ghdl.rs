@@ -90,9 +90,11 @@ pub fn analyze(source: &Path, work_dir: &Path, vhdl_std: &str) -> Result<(u32, u
 
 pub fn analyze_syntax(source: &Path, work_dir: &Path, vhdl_std: &str) -> Result<Vec<Issue>> {
     let std_flag = format!("--std={}", ghdl_std(vhdl_std));
+    let abs_source = std::path::absolute(source)
+        .unwrap_or_else(|_| source.to_path_buf());
     let output = Command::new(binary_path())
         .args(["-a", &std_flag, "--workdir=.", "--syntax-only"])
-        .arg(source)
+        .arg(&abs_source)
         .current_dir(work_dir)
         .output()
         .context("Syntax analysis failed")?;
