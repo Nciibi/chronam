@@ -20,26 +20,7 @@ pub fn run(args: &CleanArgs, cli: &Cli) -> Result<()> {
         return Ok(());
     }
 
-    let mut count = 0u64;
-    if let Ok(entries) = std::fs::read_dir(&work_dir) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.is_file() {
-                let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
-                match ext {
-                    "o" | "cf" => {
-                        std::fs::remove_file(&path)?;
-                        count += 1;
-                    }
-                    "vcd" | "ghw" if args.all => {
-                        std::fs::remove_file(&path)?;
-                        count += 1;
-                    }
-                    _ => {}
-                }
-            }
-        }
-    }
+    let count = crate::engine::ghdl::clean(&work_dir)?;
 
     success("clean", &format!("Removed {} artifact(s) from {}", count, dim(&work_dir.display().to_string())));
     Ok(())
