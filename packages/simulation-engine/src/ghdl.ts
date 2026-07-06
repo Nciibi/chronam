@@ -77,7 +77,7 @@ export class GHDLAdapter implements SimulatorAdapter {
   }
 
   private normPath(p: string): string {
-    return p.replace(/\\/g, '/');
+    return p;
   }
 
   private runArgs(args: string[], workDir: string, timeoutMs: number, onStderr?: (line: string) => void) {
