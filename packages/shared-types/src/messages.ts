@@ -68,7 +68,8 @@ export type WebviewToExtensionMessage =
   | WebviewErrorMessage
   | ViewportChangedMessage
   | CursorChangedMessage
-  | SignalConfigChangedMessage;
+  | SignalConfigChangedMessage
+  | AiQueryMessage;
 
 export interface SimulationRunMessage {
   type: 'simulation:run';
@@ -112,6 +113,11 @@ export interface CursorChangedMessage {
 export interface SignalConfigChangedMessage {
   type: 'signal:configChanged';
   config: SignalDisplayConfig;
+}
+
+export interface AiQueryMessage {
+  type: 'ai:query';
+  text: string;
 }
 
 // ─── Theme Configuration ────────────────────────────────────────────────────
