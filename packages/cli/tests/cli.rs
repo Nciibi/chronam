@@ -164,7 +164,7 @@ fn test_info_with_project() {
 
 #[test]
 fn test_doctor() {
-    let (stdout, stderr, ok) = run(&["doctor"]);
+    let (stdout, _stderr, _ok) = run(&["doctor"]);
     // doctor might fail if ghdl not available — that's OK, just check output format
     assert!(stdout.contains("GHDL"), "stdout: {stdout}");
     assert!(stdout.contains("Project Config"), "stdout: {stdout}");
