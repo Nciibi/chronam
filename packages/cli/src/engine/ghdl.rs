@@ -137,7 +137,9 @@ pub fn elaborate(entity: &str, work_dir: &Path, vhdl_std: &str) -> Result<(u32, 
 pub fn run(entity: &str, work_dir: &Path, vhdl_std: &str, duration_ns: u64, wave_format: &str) -> Result<Option<String>> {
     let std_flag = format!("--std={}", ghdl_std(vhdl_std));
     let stop_time = format!("--stop-time={}ns", duration_ns);
-    let vcd_path = work_dir.join(format!("{}.vcd", entity));
+    let abs_work_dir = std::path::absolute(work_dir)
+        .unwrap_or_else(|_| work_dir.to_path_buf());
+    let vcd_path = abs_work_dir.join(format!("{}.vcd", entity));
     let vcd_flag = format!("--vcd={}", vcd_path.display());
 
     let mut args = vec!["-r", &std_flag, "--workdir=.", entity, &stop_time];
