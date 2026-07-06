@@ -1,8 +1,8 @@
-use anyhow::{Result, Context, bail};
+use anyhow::{Result, Context};
 use clap::Args;
 use std::path::PathBuf;
 use crate::cli::Cli;
-use crate::output::{step, success, highlight, dim};
+use crate::output::{step, success, error_, highlight, dim};
 
 #[derive(Args, Debug)]
 pub struct NewArgs {
@@ -19,7 +19,8 @@ pub fn run(args: &NewArgs, _cli: &Cli) -> Result<()> {
     let dir = args.directory.clone().unwrap_or_else(|| PathBuf::from(&args.name));
 
     if dir.exists() {
-        bail!("Directory '{}' already exists", dir.display());
+        error_(&format!("Directory '{}' already exists", dir.display()));
+        std::process::exit(1);
     }
 
     step("project", "Creating project structure...");
