@@ -57,7 +57,7 @@ pub fn parse(path: &Path) -> Result<VcdData> {
             } else if line.starts_with("$var") {
                 let parts: Vec<&str> = line.split_whitespace().collect();
                 if parts.len() >= 4 {
-                    let var_type = parts[1];
+                    let _var_type = parts[1];
                     let width: u32 = parts[2].parse().unwrap_or(1);
                     let id = parts[3].to_string();
                     let name = if parts.len() > 4 {
