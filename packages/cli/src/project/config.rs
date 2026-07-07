@@ -15,6 +15,8 @@ pub struct ProjectConfig {
     pub devices: DevicesSection,
     #[serde(default)]
     pub timing: TimingSection,
+    #[serde(skip)]
+    pub config_dir: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
