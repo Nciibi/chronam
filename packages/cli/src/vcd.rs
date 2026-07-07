@@ -136,36 +136,15 @@ pub fn render_timing_diagram(
         signal_filter = data.signals.iter().collect();
     }
 
-    let mut signal_changes: Vec<(usize, Vec<ValueChange>)> = signal_filter
-        .iter()
-        .map(|sig| {
-            let sig_changes: Vec<ValueChange> = data
-                .changes
-                .iter()
-                .filter(|c| c.id == sig.id && c.time <= time_window_ns * 1_000_000)
-                .cloned()
-                .collect();
-            (signal_filter.iter().position(|s| s.id == sig.id).unwrap(), sig_changes)
-        })
-        .collect();
-
     let max_time_fs = time_window_ns * 1_000_000;
     let num_cols = 80usize.min((max_time_fs / 100_000) as usize + 1);
     let time_step = (max_time_fs / num_cols as u64).max(1);
 
     let mut output = String::new();
 
-    let time_scale_label = match data.timescale.to_lowercase().as_str() {
-        "1 fs" | "1fs" => "fs",
-        "1 ps" | "1ps" => "ps",
-        "1 ns" | "1ns" => "ns",
-        "1 us" | "1us" => "us",
-        _ => "fs",
-    };
-
     output.push_str(&format!("Timing diagram ({} window):\n\n", time_window_ns));
 
-    for (idx, sig) in signal_filter.iter().enumerate() {
+    for sig in &signal_filter {
         output.push_str(&format!("{:<20} ", sig.name));
 
         let sig_changes: Vec<&ValueChange> = data
@@ -173,8 +152,6 @@ pub fn render_timing_diagram(
             .iter()
             .filter(|c| c.id == sig.id)
             .collect();
-
-        let _label = if sig.width == 1 { "" } else { "" };
 
         if sig.width == 1 {
             for col in 0..num_cols {
