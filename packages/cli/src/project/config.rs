@@ -158,13 +158,18 @@ fn find_project_config() -> Result<PathBuf> {
     Ok(path)
 }
 
-pub fn resolve_sources(patterns: &[String]) -> Result<Vec<PathBuf>> {
+pub fn resolve_sources(patterns: &[String], base_dir: Option<&PathBuf>) -> Result<Vec<PathBuf>> {
     let mut files: Vec<PathBuf> = Vec::new();
     let mut seen: HashSet<PathBuf> = HashSet::new();
+    let cwd = std::env::current_dir().unwrap_or_default();
 
     for pattern in patterns {
-        let entries = glob::glob(pattern)
-            .with_context(|| format!("Invalid glob pattern '{}'", pattern))?;
+        let full_pattern = base_dir
+            .filter(|_| !pattern.starts_with('/') && !pattern.starts_with(r"\"))
+            .map(|d| d.join(pattern).to_string_lossy().to_string())
+            .unwrap_or_else(|| pattern.clone());
+        let entries = glob::glob(&full_pattern)
+            .with_context(|| format!("Invalid glob pattern '{}'", full_pattern))?;
 
         for entry in entries {
             match entry {
