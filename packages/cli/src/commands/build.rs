@@ -29,7 +29,7 @@ pub fn run(args: &BuildArgs, cli: &Cli) -> Result<()> {
         return Ok(());
     }
 
-    let sources = crate::project::config::resolve_sources(&config.build.sources)?;
+    let sources = crate::project::config::resolve_sources(&config.build.sources, config.config_dir.as_ref())?;
     if sources.is_empty() {
         warn("No VHDL source files found matching the configured patterns");
         return Ok(());
