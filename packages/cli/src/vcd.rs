@@ -183,37 +183,28 @@ fn render_bit_signal(out: &mut String, changes: &[&ValueChange], cols: usize, st
 fn render_bus_signal(out: &mut String, changes: &[&ValueChange], cols: usize, step: u64, width: u32, max_fs: u64) {
     let mut last_hex = String::new();
     let mut pos = 0u64;
+    let mut c = 0usize;
 
-    for c in 0..cols {
+    while c < cols {
         let t = c as u64 * step;
         let val = get_bin_value_at(changes, t, &"0".repeat(width as usize));
         let hex = bin_to_hex(&val);
 
-        if hex != last_hex {
-            if t - pos > step * 2 || c == cols - 1 || c == 0 {
-                for (i, ch) in hex.chars().enumerate() {
-                    if c + i < cols {
-                        out.push(ch);
-                    }
+        if hex != last_hex && (t - pos > step * 2 || c == cols - 1 || c == 0) {
+            for (i, ch) in hex.chars().enumerate() {
+                if c + i < cols {
+                    out.push(ch);
+                    last_hex = ch.to_string();
                 }
-                let skip = hex.len().saturating_sub(1);
-                let mut skipped = 0usize;
-                let mut ic = c;
-                while skipped < skip && ic + 1 < cols {
-                    out.push(' ');
-                    skipped += 1;
-                    ic += 1;
-                }
-                // adjust the outer loop counter by injecting spaces
-                // We can't modify c, so we rely on already-added spaces
-                pos = t;
-                last_hex = hex;
-            } else {
-                out.push('_');
             }
-        } else {
+            let skip = hex.len().saturating_sub(1);
+            c += skip;
+            pos = t;
+            last_hex = hex;
+        } else if hex == last_hex || c != 0 {
             out.push('_');
         }
+        c += 1;
     }
 }
 
