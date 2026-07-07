@@ -255,7 +255,7 @@ fn render_bus_wave(out: &mut String, changes: &[&ValueChange], cols: usize, step
                 continue;
             }
         }
-        wave.push('\u{2581}');
+        wave.push('_');
         c += 1;
     }
 
