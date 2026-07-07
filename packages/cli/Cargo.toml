@@ -14,7 +14,8 @@ path = "src/main.rs"
 [dependencies]
 clap = { version = "4", features = ["derive", "env", "unicode", "wrap_help"] }
 clap_complete = "4"
-crossterm = "0.28"
+crossterm = { version = "0.28", features = ["event-stream"] }
+ratatui = "0.29"
 anyhow = "1"
 thiserror = "2"
 serde = { version = "1", features = ["derive"] }
