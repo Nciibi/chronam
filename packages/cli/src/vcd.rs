@@ -123,10 +123,6 @@ fn fmt_name(s: &str) -> String {
     format!("\x1b[92m{}\x1b[0m", s)
 }
 
-fn fmt_label(s: &str) -> String {
-    format!("\x1b[32m{}\x1b[0m", s)
-}
-
 pub fn render_timing_diagram(data: &VcdData, signal_names: &[String], time_window_ns: u64) -> String {
     let mut signal_filter: Vec<&Signal> = if signal_names.is_empty() {
         data.signals.iter().collect()
