@@ -104,7 +104,7 @@ pub fn analyze_syntax(source: &Path, work_dir: &Path, vhdl_std: &str) -> Result<
     let abs_source = std::path::absolute(source)
         .unwrap_or_else(|_| source.to_path_buf());
     let output = Command::new(binary_path())
-        .args(["-a", &std_flag, "--workdir=.", "--syntax-only"])
+        .args(["-a", &std_flag, "--workdir=."])
         .arg(&abs_source)
         .current_dir(work_dir)
         .output()
