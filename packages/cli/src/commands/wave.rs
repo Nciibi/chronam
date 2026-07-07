@@ -1,6 +1,5 @@
 use anyhow::Result;
 use clap::Args;
-use colored::Colorize;
 use crate::cli::Cli;
 use crate::output::{step, error_, highlight};
 

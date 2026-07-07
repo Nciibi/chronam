@@ -141,7 +141,8 @@ pub fn run_interactive(data: &VcdData) -> io::Result<()> {
             },
             Event::Mouse(m) => match m.kind {
                 MouseEventKind::Down(MouseButton::Left) => {
-                    let wave_cols = area.saturating_sub(NAME_W + 3);
+                    let term_w = crossterm::terminal::size().map(|(w, _)| w).unwrap_or(120);
+                    let wave_cols = term_w.saturating_sub(NAME_W + 3);
                     if m.column > NAME_W + 2 {
                         let col = m.column.saturating_sub(NAME_W + 3) as u64;
                         if wave_cols > 0 {
@@ -293,7 +294,6 @@ fn render_waves(
         let spans = if let Some(ci) = cursor_idx {
             if ci < wave.len() {
                 let pre: String = wave[..ci].chars().collect();
-                let at: String = wave[ci..].chars().take(1).collect();
                 let post: String = wave[ci..].chars().skip(1).collect();
                 vec![
                     name_span,
