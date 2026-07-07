@@ -14,7 +14,7 @@ pub struct LintArgs {
 pub fn run(args: &LintArgs, cli: &Cli) -> Result<()> {
     let config = crate::project::config::load_config(cli.project.as_deref())?;
     let sources = if args.files.is_empty() {
-        crate::project::config::resolve_sources(&config.build.sources)?
+        crate::project::config::resolve_sources(&config.build.sources, config.config_dir.as_ref())?
     } else {
         args.files.iter().map(std::path::PathBuf::from).collect()
     };

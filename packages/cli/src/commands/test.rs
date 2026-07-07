@@ -18,7 +18,7 @@ pub struct TestArgs {
 
 pub fn run(args: &TestArgs, cli: &Cli) -> Result<()> {
     let config = crate::project::config::load_config(cli.project.as_deref())?;
-    let sources = crate::project::config::resolve_sources(&config.build.sources)?;
+    let sources = crate::project::config::resolve_sources(&config.build.sources, config.config_dir.as_ref())?;
 
     let testbenches: Vec<_> = sources.iter()
         .filter(|s| {

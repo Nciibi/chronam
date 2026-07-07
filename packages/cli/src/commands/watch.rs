@@ -15,7 +15,7 @@ pub struct WatchArgs {
 
 pub fn run(args: &WatchArgs, cli: &Cli) -> Result<()> {
     let config = crate::project::config::load_config(cli.project.as_deref())?;
-    let sources = crate::project::config::resolve_sources(&config.build.sources)?;
+    let sources = crate::project::config::resolve_sources(&config.build.sources, config.config_dir.as_ref())?;
 
     let dirs: Vec<_> = sources.iter()
         .filter_map(|s| s.parent())

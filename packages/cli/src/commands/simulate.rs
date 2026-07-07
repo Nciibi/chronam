@@ -36,7 +36,7 @@ pub fn run(args: &SimulateArgs, cli: &Cli) -> Result<()> {
     }
 
     let work_dir = config.project.work_dir();
-    let sources = crate::project::config::resolve_sources(&config.build.sources)?;
+    let sources = crate::project::config::resolve_sources(&config.build.sources, config.config_dir.as_ref())?;
 
     step("sim", "Analyzing design files...");
     for source in &sources {

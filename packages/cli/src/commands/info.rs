@@ -56,7 +56,7 @@ pub fn run(_args: &InfoArgs, cli: &Cli) -> Result<()> {
     println!("{}", table);
     println!();
 
-    let sources = crate::project::config::resolve_sources(&config.build.sources)?;
+    let sources = crate::project::config::resolve_sources(&config.build.sources, config.config_dir.as_ref())?;
     println!("  {} {} {} source file(s) found", dim("·"), highlight(&sources.len().to_string()), dim("matching patterns"));
 
     Ok(())
