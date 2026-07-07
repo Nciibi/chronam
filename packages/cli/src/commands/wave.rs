@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::Args;
+use colored::Colorize;
 use crate::cli::Cli;
 use crate::output::{step, error_, highlight};
 
@@ -12,6 +13,9 @@ pub struct WaveArgs {
 
     #[arg(short = 't', long = "time", default_value = "200")]
     pub time_ns: u64,
+
+    #[arg(long = "print")]
+    pub print: bool,
 }
 
 pub fn run(args: &WaveArgs, _cli: &Cli) -> Result<()> {
@@ -26,6 +30,18 @@ pub fn run(args: &WaveArgs, _cli: &Cli) -> Result<()> {
 
     if !path.exists() {
         error_(&format!("VCD file not found: {}", path.display()));
+        return Ok(());
+    }
+
+    if !args.print {
+        match crate::vcd::parse(&path) {
+            Ok(data) => {
+                crate::tui::run_interactive(&data)?;
+            }
+            Err(e) => {
+                error_(&format!("Failed to parse VCD: {}", e));
+            }
+        }
         return Ok(());
     }
 
