@@ -61,6 +61,9 @@ pub enum Commands {
     #[command(aliases = &["completions"])]
     Completion(crate::commands::completion::CompletionArgs),
 
+    #[command(aliases = &["vw", "view"])]
+    Wave(crate::commands::wave::WaveArgs),
+
     Info(crate::commands::info::InfoArgs),
 
     #[command(aliases = &["h", "?"])]
@@ -81,6 +84,7 @@ impl Cli {
             Commands::Watch(args) => watch::run(args, self),
             Commands::Test(args) => test::run(args, self),
             Commands::Completion(args) => completion::run(args, self),
+            Commands::Wave(args) => wave::run(args, self),
             Commands::Info(args) => info::run(args, self),
             Commands::Help(_) => {
                 <Cli as CommandFactory>::command().print_help()?;

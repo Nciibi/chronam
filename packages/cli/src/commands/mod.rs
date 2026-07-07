@@ -10,3 +10,4 @@ pub mod new;
 pub mod simulate;
 pub mod test;
 pub mod watch;
+pub mod wave;

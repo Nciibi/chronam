@@ -3,6 +3,7 @@ mod commands;
 mod engine;
 mod output;
 mod project;
+mod vcd;
 
 use anyhow::Result;
 
