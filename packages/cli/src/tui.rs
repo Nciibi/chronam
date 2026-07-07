@@ -5,7 +5,7 @@ use crossterm::event::{self, Event, KeyCode, KeyEventKind, MouseButton, MouseEve
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
 use crossterm::ExecutableCommand;
 
-use ratatui::layout::{Constraint, Direction, Layout, Rect};
+use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::Paragraph;
@@ -74,7 +74,7 @@ pub fn run_interactive(data: &VcdData) -> io::Result<()> {
 
     loop {
         terminal.draw(|f| {
-            let area = f.size();
+            let area = f.area();
             let vert = Layout::vertical([
                 Constraint::Length(2),
                 Constraint::Min(1),
