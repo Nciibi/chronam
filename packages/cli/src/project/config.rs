@@ -117,8 +117,12 @@ pub fn load_config(path: Option<&str>) -> Result<ProjectConfig> {
     let content = std::fs::read_to_string(&config_path)
         .with_context(|| format!("Failed to read {}", config_path.display()))?;
 
-    let config: ProjectConfig = toml::from_str(&content)
+    let mut config: ProjectConfig = toml::from_str(&content)
         .with_context(|| format!("Failed to parse {}", config_path.display()))?;
+
+    if let Some(parent) = config_path.parent() {
+        config.config_dir = Some(parent.to_path_buf());
+    }
 
     Ok(config)
 }
