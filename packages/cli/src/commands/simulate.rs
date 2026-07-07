@@ -66,18 +66,32 @@ pub fn run(args: &SimulateArgs, cli: &Cli) -> Result<()> {
     }
 
     step("sim", "Running simulation...");
-    match crate::engine::ghdl::run(top, &work_dir, &config.build.vhdl_std, args.duration_ns, &args.wave_format) {
-        Ok(vcd_path) => {
+    let vcd_path = match crate::engine::ghdl::run(top, &work_dir, &config.build.vhdl_std, args.duration_ns, &args.wave_format) {
+        Ok(path) => {
             success("sim", &format!("Simulation complete ({})", dim(&format!("{}ns", args.duration_ns))));
-            if let Some(vcd) = vcd_path {
-                if !vcd.is_empty() {
-                    println!("  {} Waveform: {}", dim("└"), highlight(&vcd));
-                }
-            }
+            path
         }
         Err(e) => {
             error_(&format!("Simulation failed: {}", e));
+            return Ok(());
+        }
+    };
+
+    if let Some(ref vcd) = vcd_path {
+        if !vcd.is_empty() {
+            println!("  {} Waveform: {}", dim("└"), highlight(vcd));
+            println!();
+            match crate::vcd::parse(std::path::Path::new(vcd)) {
+                Ok(data) => {
+                    let diagram = crate::vcd::render_timing_diagram(&data, &[], args.duration_ns);
+                    println!("{}", diagram);
+                }
+                Err(e) => {
+                    error_(&format!("Failed to render waveform: {}", e));
+                }
+            }
         }
     }
+
     Ok(())
 }
