@@ -3,8 +3,6 @@ use std::time::Duration;
 
 use crossterm::event::{self, Event, KeyCode, KeyEventKind, MouseButton, MouseEventKind};
 use crossterm::event::{DisableMouseCapture, EnableMouseCapture};
-use crossterm::term::disable_raw_mode;
-use crossterm::term::enable_raw_mode;
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
 use crossterm::ExecutableCommand;
 
