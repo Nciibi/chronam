@@ -8,10 +8,10 @@ use crossterm::ExecutableCommand;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState};
+use ratatui::widgets::Paragraph;
 use ratatui::{Frame, Terminal};
 
-use crate::vcd::{self, VcdData};
+use crate::vcd::VcdData;
 
 const NAME_W: u16 = 22;
 
@@ -48,7 +48,7 @@ pub fn run_interactive(data: &VcdData) -> io::Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     let total_fs = data.changes.last().map(|c| c.time).unwrap_or(0).max(1);
-    let window = total_fs.min(200_000_000_000); // 200 ns default
+    let default_window = total_fs.min(200_000_000_000);
 
     let changes_by_id: Vec<Vec<(u64, String)>> = data
         .signals
@@ -67,9 +67,8 @@ pub fn run_interactive(data: &VcdData) -> io::Result<()> {
 
     let mut scroll: usize = 0;
     let mut win_start: u64 = 0;
-    let mut win_end: u64 = window;
+    let mut win_end: u64 = default_window;
     let mut cursor_time: Option<u64> = None;
-    let mut cursor_col: Option<u16> = None;
 
     let tick = Duration::from_millis(50);
 
@@ -83,18 +82,8 @@ pub fn run_interactive(data: &VcdData) -> io::Result<()> {
             ])
             .split(area);
 
-            render_ruler(f, vert[0], win_start, win_end, data, cursor_time);
-            render_waves(
-                f,
-                vert[1],
-                win_start,
-                win_end,
-                &mut scroll,
-                data,
-                &changes_by_id,
-                &mut cursor_time,
-                &mut cursor_col,
-            );
+            render_ruler(f, vert[0], win_start, win_end);
+            render_waves(f, vert[1], win_start, win_end, &scroll, data, &changes_by_id, cursor_time);
             render_status(f, vert[2], win_start, win_end, cursor_time, scroll, data.signals.len());
         })?;
 
@@ -111,46 +100,55 @@ pub fn run_interactive(data: &VcdData) -> io::Result<()> {
                 KeyCode::Char('k') | KeyCode::Up => scroll = scroll.saturating_sub(1),
                 KeyCode::Char('h') | KeyCode::Left => {
                     let step = (win_end - win_start) / 4;
-                    win_start = win_start.saturating_sub(step);
-                    win_end = win_end.saturating_sub(step);
-                    if win_end < 1000 {
-                        win_start = 0;
-                        win_end = window.min(total_fs);
+                    if win_end > win_start + step {
+                        win_start = win_start.saturating_sub(step);
+                        win_end = win_end.saturating_sub(step);
                     }
                 }
                 KeyCode::Char('l') | KeyCode::Right => {
                     let step = (win_end - win_start) / 4;
-                    win_start = (win_start + step).min(total_fs.saturating_sub(1000));
-                    win_end = (win_end + step).min(total_fs);
-                    if win_end - win_start < 1000 {
+                    if win_end + step <= total_fs {
+                        win_start += step;
+                        win_end += step;
+                    } else if win_end < total_fs {
+                        let diff = total_fs - win_end;
+                        win_start += diff;
                         win_end = total_fs;
-                        win_start = total_fs.saturating_sub(1000);
                     }
                 }
                 KeyCode::Char('+') | KeyCode::Char('=') => {
                     let c = (win_start + win_end) / 2;
                     let half = (win_end - win_start) / 4;
-                    win_start = c.saturating_sub(half);
-                    win_end = (c + half).min(total_fs).max(win_start + 1000);
+                    let new_start = c.saturating_sub(half);
+                    let new_end = (c + half).min(total_fs).max(new_start + 1000);
+                    if new_end > new_start {
+                        win_start = new_start;
+                        win_end = new_end;
+                    }
                 }
                 KeyCode::Char('-') | KeyCode::Char('_') => {
                     let c = (win_start + win_end) / 2;
-                    let span = (win_end - win_start).min(total_fs / 2);
-                    win_start = c.saturating_sub(span);
-                    win_end = (c + span).min(total_fs).max(win_start + 1000);
+                    let span = (win_end - win_start).min(total_fs / 2).max(1000);
+                    let new_start = c.saturating_sub(span);
+                    let new_end = (c + span).min(total_fs).max(new_start + 1000);
+                    if new_end > new_start && new_end - new_start <= total_fs {
+                        win_start = new_start;
+                        win_end = new_end;
+                    }
                 }
                 KeyCode::Char('c') => cursor_time = None,
                 _ => {}
             },
             Event::Mouse(m) => match m.kind {
                 MouseEventKind::Down(MouseButton::Left) => {
-                    let wave_cols = area_width(NAME_W);
-                    if m.column > NAME_W + 2 && (m.row as usize) >= 2 && (m.row as usize) < area_height() - 1 {
-                        let col = m.column.saturating_sub(NAME_W + 3);
-                        let ratio = col as f64 / wave_cols.max(1) as f64;
-                        let time = win_start + ((win_end - win_start) as f64 * ratio) as u64;
-                        cursor_time = Some(time);
-                        cursor_col = Some(col);
+                    let wave_cols = area.saturating_sub(NAME_W + 3);
+                    if m.column > NAME_W + 2 {
+                        let col = m.column.saturating_sub(NAME_W + 3) as u64;
+                        if wave_cols > 0 {
+                            let dur = win_end - win_start;
+                            let time = win_start + (dur * col / wave_cols as u64);
+                            cursor_time = Some(time);
+                        }
                     }
                 }
                 MouseEventKind::ScrollDown => {
@@ -161,9 +159,6 @@ pub fn run_interactive(data: &VcdData) -> io::Result<()> {
                 }
                 _ => {}
             },
-            Event::Resize(_, _) => {
-                cursor_col = None;
-            }
             _ => {}
         }
     }
@@ -173,31 +168,18 @@ pub fn run_interactive(data: &VcdData) -> io::Result<()> {
     Ok(())
 }
 
-fn area_width(name_w: u16) -> u16 {
-    120u16.saturating_sub(name_w + 4)
-}
-
-fn area_height() -> u16 {
-    40u16
-}
-
-fn render_ruler(
-    f: &mut Frame,
-    area: Rect,
-    win_start: u64,
-    win_end: u64,
-    _data: &VcdData,
-    cursor: Option<u64>,
-) {
+fn render_ruler(f: &mut Frame, area: Rect, win_start: u64, win_end: u64) {
     if area.width < 10 {
         return;
     }
     let wave_cols = area.width.saturating_sub(NAME_W + 3);
     let step = (win_end - win_start) / wave_cols.max(1) as u64;
 
-    let mut label_line = String::new();
-    label_line.push_str(&" ".repeat(NAME_W as usize + 3));
+    let indent = " ".repeat((NAME_W + 3) as usize);
+    let dim = Style::default().fg(Color::DarkGray);
 
+    let mut label_line = String::new();
+    label_line.push_str(&indent);
     let mut c = 0usize;
     while c < wave_cols as usize {
         if c % 10 == 0 {
@@ -212,38 +194,25 @@ fn render_ruler(
     }
 
     let mut grid_line = String::new();
-    grid_line.push_str(&" ".repeat(NAME_W as usize + 3));
+    grid_line.push_str(&indent);
     for c in 0..wave_cols as usize {
-        if c % 10 == 0 {
-            grid_line.push('┼');
-        } else if c % 5 == 0 {
-            grid_line.push('·');
-        } else {
-            grid_line.push('─');
-        }
+        grid_line.push(if c % 10 == 0 { '┼' } else if c % 5 == 0 { '·' } else { '─' });
     }
 
-    let dim = Style::default().fg(Color::DarkGray);
-
-    let labels = Paragraph::new(Line::from(Span::styled(label_line, dim)));
-    let grid = Paragraph::new(Line::from(Span::styled(grid_line, dim)));
-
     let vert = Layout::vertical([Constraint::Length(1), Constraint::Length(1)]).split(area);
-    f.render_widget(labels, vert[0]);
-    f.render_widget(grid, vert[1]);
+    f.render_widget(Paragraph::new(Line::from(Span::styled(label_line, dim))), vert[0]);
+    f.render_widget(Paragraph::new(Line::from(Span::styled(grid_line, dim))), vert[1]);
 }
 
-#[allow(clippy::too_many_arguments)]
 fn render_waves(
     f: &mut Frame,
     area: Rect,
     win_start: u64,
     win_end: u64,
-    scroll: &mut usize,
+    scroll: &usize,
     data: &VcdData,
     changes_by_id: &[Vec<(u64, String)>],
-    cursor_time: &mut Option<u64>,
-    cursor_col: &mut Option<u16>,
+    cursor_time: Option<u64>,
 ) {
     let rows = area.height as usize;
     let wave_cols = area.width.saturating_sub(NAME_W + 3) as usize;
@@ -251,20 +220,26 @@ fn render_waves(
         return;
     }
 
-    let step = (win_end - win_start) / wave_cols.max(1) as u64;
     let total = data.signals.len();
-    *scroll = (*scroll).min(total.saturating_sub(1));
-
-    let mut lines: Vec<Line> = Vec::with_capacity(rows);
+    let s = (*scroll).min(total.saturating_sub(1));
+    let dur = win_end.saturating_sub(win_start).max(1);
+    let step = dur / wave_cols.max(1) as u64;
 
     let grn = Style::default().fg(Color::Green);
     let bgrn = Style::default().fg(Color::Green).add_modifier(Modifier::BOLD);
-    let cursor_style = Style::default().fg(Color::Cyan);
+    let cursor_style = Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD);
 
-    for i in *scroll..total.min(*scroll + rows) {
+    let cursor_idx = cursor_time.map(|ct| {
+        let idx = ((ct - win_start) as f64 / dur as f64 * wave_cols as f64) as usize;
+        idx.min(wave_cols.saturating_sub(1))
+    });
+
+    let end = total.min(s + rows);
+    let mut lines: Vec<Line> = Vec::with_capacity(end - s);
+
+    for i in s..end {
         let sig = &data.signals[i];
         let changes = &changes_by_id[i];
-
         let display_name = sig.name.rsplit('.').next().unwrap_or(&sig.name);
         let depth = sig.name.chars().filter(|&c| c == '.').count();
         let indent: String = (0..depth).map(|_| "  ").collect();
@@ -283,14 +258,13 @@ fn render_waves(
                 let nt = (win_start + (c as u64 + 1) * step).min(win_end);
                 let val = value_at(changes, t, "0");
                 let nval = value_at(changes, nt, "0");
-                let ch = match (val.as_str(), nval.as_str()) {
+                wave.push(match (val.as_str(), nval.as_str()) {
                     ("0", "0") => '_',
                     ("1", "1") => '\u{2594}',
                     ("0", "1") => '\u{2571}',
                     ("1", "0") => '\u{2572}',
                     _ => '_',
-                };
-                wave.push(ch);
+                });
             }
         } else {
             let zero = "0".repeat(sig.width as usize);
@@ -302,8 +276,7 @@ fn render_waves(
                 let hex = bin_to_hex(&val);
                 if hex != displayed && !hex.is_empty() {
                     let hlen = hex.len();
-                    let fit = (wave_cols - c).min(hlen + 1);
-                    if fit >= hlen {
+                    if wave_cols - c >= hlen {
                         wave.push_str(&hex);
                         c += hlen;
                         displayed = hex;
@@ -316,37 +289,36 @@ fn render_waves(
         }
 
         let name_span = Span::styled(padded, bgrn);
-        let sep = Span::raw(" │ ");
-        let wave_span = Span::styled(wave, grn);
 
-        let mut spans = vec![name_span, sep, wave_span];
-
-        if let Some(ct) = cursor_time {
-            let cursor_idx = if win_end > win_start {
-                let idx = ((ct - win_start) as f64 / (win_end - win_start) as f64 * wave_cols as f64) as usize;
-                idx.min(wave_cols.saturating_sub(1))
-            } else {
-                0
-            };
-            if cursor_idx < wave_cols {
-                let pre = &wave[..cursor_idx];
-                let at = wave[cursor_idx..].chars().next().unwrap_or(' ');
-                let post = &wave[cursor_idx + 1..];
-                spans = vec![
+        let spans = if let Some(ci) = cursor_idx {
+            if ci < wave.len() {
+                let pre: String = wave[..ci].chars().collect();
+                let at: String = wave[ci..].chars().take(1).collect();
+                let post: String = wave[ci..].chars().skip(1).collect();
+                vec![
                     name_span,
-                    sep,
-                    Span::styled(pre.to_string(), grn),
-                    Span::styled(at.to_string(), cursor_style),
-                    Span::styled(post.to_string(), grn),
-                ];
+                    Span::raw(" │ "),
+                    Span::styled(pre, grn),
+                    Span::styled("║", cursor_style),
+                    Span::styled(post, grn),
+                ]
+            } else {
+                vec![name_span, Span::raw(" │ "), Span::styled(wave, grn)]
             }
-        }
+        } else {
+            vec![name_span, Span::raw(" │ "), Span::styled(wave, grn)]
+        };
 
         lines.push(Line::from(spans));
     }
 
-    let p = Paragraph::new(lines);
-    f.render_widget(p, area);
+    if end - s < rows {
+        for _ in end - s..rows {
+            lines.push(Line::from(Span::raw("")));
+        }
+    }
+
+    f.render_widget(Paragraph::new(lines), area);
 }
 
 fn render_status(
@@ -364,7 +336,7 @@ fn render_status(
         None => String::new(),
     };
     let text = format!(
-        " Signals: {}/{} │ View: {} ns [{:.1}–{:.1} ns]{} │ jk↑↓ scroll │ hl←→ pan │ +- zoom │ c clear │ q quit",
+        " Sig {}/{} │ {} ns [{:.1}–{:.1} ns]{} │ jk scroll │ hl pan │ +- zoom │ c clear │ q quit",
         scroll + 1,
         total_sigs,
         dur_ns,
@@ -372,7 +344,8 @@ fn render_status(
         win_end as f64 / 1_000_000.0,
         cursor_str,
     );
-    let style = Style::default().fg(Color::DarkGray);
-    let p = Paragraph::new(Line::from(Span::styled(text, style)));
-    f.render_widget(p, area);
+    f.render_widget(
+        Paragraph::new(Line::from(Span::styled(text, Style::default().fg(Color::DarkGray)))),
+        area,
+    );
 }
