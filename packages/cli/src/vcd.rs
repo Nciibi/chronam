@@ -23,10 +23,6 @@ pub struct VcdData {
     pub changes: Vec<ValueChange>,
 }
 
-fn grn(s: &str) -> String { format!("\x1b[32m{}\x1b[0m", s) }
-fn bgrn(s: &str) -> String { format!("\x1b[92m{}\x1b[0m", s) }
-fn dim_grn(s: &str) -> String { format!("\x1b[2;32m{}\x1b[0m", s) }
-
 pub fn parse(path: &Path) -> Result<VcdData> {
     let content = std::fs::read_to_string(path)?;
     let mut signals = Vec::new();
@@ -101,136 +97,34 @@ pub fn parse(path: &Path) -> Result<VcdData> {
 
 fn terminal_cols() -> usize {
     if let Ok((w, _)) = crossterm::terminal::size() {
-        return w as usize;
+        return (w as usize).max(40);
     }
     std::env::var("COLUMNS").ok().and_then(|s| s.parse().ok()).unwrap_or(120)
 }
 
-fn build_tree(signals: &[Signal]) -> Vec<(usize, &Signal)> {
-    struct Node<'a> {
-        depth: usize,
-        sig: &'a Signal,
-        name_part: &'a str,
-    }
-
-    let mut roots: Vec<Vec<Node>> = Vec::new();
-    let mut sigs: Vec<(&Signal, Vec<&str>)> = signals.iter().map(|s| {
-        let parts: Vec<&str> = s.name.split('.').collect();
-        (s, parts)
-    }).collect();
-
-    sigs.sort_by(|a, b| a.1.cmp(&b.1));
-
-    let mut result = Vec::new();
-    for (sig, parts) in &sigs {
-        let depth = parts.len().saturating_sub(1);
-        result.push((depth, *sig));
+fn build_tree(signals: &[&Signal]) -> HashMap<String, usize> {
+    let mut result = HashMap::new();
+    for sig in signals {
+        let depth = sig.name.chars().filter(|&c| c == '.').count();
+        result.insert(sig.id.clone(), depth);
     }
     result
 }
 
-fn render_time_ruler(cols: usize, step: u64) -> String {
-    let mut out = String::new();
-    out.push_str(&format!("  {:>24} ", dim_grn("ns")));
-
-    let mut c = 0usize;
-    while c < cols {
-        if c % 10 == 0 {
-            let t_ns = (c as u64 * step) / 1_000_000;
-            let label = format!("{}", t_ns);
-            out.push_str(&dim_grn(&label));
-            c += label.len();
-        } else if c % 5 == 0 {
-            out.push_str(&dim_grn("·"));
-            c += 1;
-        } else {
-            out.push(' ');
-            c += 1;
-        }
-    }
-    out.push('\n');
-
-    out.push_str(&format!("  {:>24} ", ""));
-    for c in 0..cols {
-        if c % 10 == 0 {
-            out.push_str(&dim_grn("┼"));
-        } else if c % 5 == 0 {
-            out.push_str(&dim_grn("·"));
-        } else {
-            out.push_str(&dim_grn("─"));
-        }
-    }
-    out.push('\n');
-
-    out
+fn fmt_dim(s: &str) -> String {
+    format!("\x1b[2;32m{}\x1b[0m", s)
 }
 
-fn render_bit_signal(changes: &[&ValueChange], cols: usize, step: u64) -> String {
-    let mut out = String::new();
-
-    let mut prev_val = get_value_at(changes, 0, '0');
-    for c in 0..cols {
-        let t = c as u64 * step;
-        let val = get_value_at(changes, t, '0');
-        let next_t = ((c as u64 + 1) * step);
-        let next_val = get_value_at(changes, next_t, '0');
-
-        let ch = match (val, next_val) {
-            ('0', '0') => '_',
-            ('1', '1') => '\u{2594}',
-            ('0', '1') => '\u{2571}',
-            ('1', '0') => '\u{2572}',
-            _ => '_',
-        };
-        out.push(ch);
-        prev_val = val;
-    }
-
-    grn(&out)
+fn fmt_wave(s: &str) -> String {
+    format!("\x1b[92m{}\x1b[0m", s)
 }
 
-fn render_bus_signal(changes: &[&ValueChange], cols: usize, step: u64, width: u32) -> String {
-    let initial = "0".repeat(width as usize);
-    let mut displayed = String::new();
-    let mut out = String::new();
-    let mut c = 0usize;
+fn fmt_name(s: &str) -> String {
+    format!("\x1b[92m{}\x1b[0m", s)
+}
 
-    while c < cols {
-        let t = c as u64 * step;
-        let val = get_bin_value_at(changes, t, &initial);
-        let hex = bin_to_hex(&val);
-
-        if hex != displayed {
-            let hlen = hex.len();
-            let end = (c + hlen).min(cols);
-            let space = end - c;
-            if hlen > 0 && space >= hlen.saturating_sub(1) {
-                let label = if hlen == 1 {
-                    format!("{}", &hex[..space.min(hlen)])
-                } else if space >= hlen {
-                    let mut s = String::new();
-                    s.push_str(&hex[..1]);
-                    for i in 1..hlen {
-                        s.push(' ');
-                        if i < space {
-                            s.push_str(&hex[i..=i]);
-                        }
-                    }
-                    s
-                } else {
-                    hex.chars().take(space).collect()
-                };
-                out.push_str(&grn(&label));
-                c += end - c;
-                displayed = hex;
-                continue;
-            }
-        }
-        out.push_str(&grn("▁"));
-        c += 1;
-    }
-
-    out
+fn fmt_label(s: &str) -> String {
+    format!("\x1b[32m{}\x1b[0m", s)
 }
 
 pub fn render_timing_diagram(data: &VcdData, signal_names: &[String], time_window_ns: u64) -> String {
@@ -246,52 +140,130 @@ pub fn render_timing_diagram(data: &VcdData, signal_names: &[String], time_windo
         signal_filter = data.signals.iter().collect();
     }
 
-    let cols = terminal_cols().saturating_sub(28).max(20);
+    let total_cols = terminal_cols();
+    let name_width = 26usize;
+    let wave_cols = total_cols.saturating_sub(name_width + 4).max(20);
 
     let max_time_fs = time_window_ns * 1_000_000;
-    let time_step = (max_time_fs / cols as u64).max(1);
+    let time_step = (max_time_fs / wave_cols as u64).max(1);
 
     let mut out = String::new();
-    let timeline = render_time_ruler(cols, time_step);
-    out.push_str(&timeline);
 
-    let tree = build_tree(data.signals.iter().collect::<Vec<_>>().as_slice());
-    let tree_lookup: HashMap<&str, usize> = tree.iter()
-        .map(|(d, s)| (s.id.as_str(), *d))
-        .collect();
+    // ── Time ruler ──
+    build_time_ruler(&mut out, wave_cols, time_step, name_width);
 
+    // ── Build depth map for hierarchy ──
+    let depth_map = build_tree(&signal_filter);
+
+    // ── Signal rows ──
     for sig in &signal_filter {
-        let depth = tree_lookup.get(sig.id.as_str()).copied().unwrap_or(0);
-        let prefix = if depth == 0 {
-            String::new()
-        } else if depth <= 2 {
-            "  ".repeat(depth)
+        let depth = depth_map.get(&sig.id).copied().unwrap_or(0);
+        let display_name = sig.name.rsplit('.').next().unwrap_or(&sig.name);
+        let tree_prefix: String = (0..depth).map(|_| "  ").collect();
+        let padded = format!("{}{}", tree_prefix, display_name);
+        let truncated = if padded.len() > name_width {
+            format!("..{}", &padded[padded.len().saturating_sub(name_width - 2)..])
         } else {
-            "  ".repeat(2) + "…" + &"  ".repeat(depth - 2)
+            format!("{:>width$}", padded, width = name_width)
         };
 
-        let display_name = if let Some(dot) = sig.name.rfind('.') {
-            &sig.name[dot + 1..]
-        } else {
-            &sig.name
-        };
-
-        let name_str = format!("{}{}", prefix, display_name);
-        out.push_str(&format!("  {} │ ", bgrn(&format!("{:>24}", name_str))));
+        out.push_str(&format!("  {} │ ", fmt_name(&truncated)));
 
         let changes: Vec<&ValueChange> = data.changes.iter()
             .filter(|c| c.id == sig.id)
             .collect();
 
         if sig.width == 1 {
-            out.push_str(&render_bit_signal(&changes, cols, time_step));
+            render_bit_wave(&mut out, &changes, wave_cols, time_step);
         } else {
-            out.push_str(&render_bus_signal(&changes, cols, time_step, sig.width));
+            render_bus_wave(&mut out, &changes, wave_cols, time_step, sig.width);
         }
         out.push('\n');
     }
 
     out
+}
+
+fn build_time_ruler(out: &mut String, cols: usize, step: u64, name_width: usize) {
+    // Ruler row: time labels
+    out.push_str(&format!("  {:>width$} ", "", width = name_width));
+    let mut label_line = String::new();
+    let mut c = 0usize;
+    while c < cols {
+        if c % 10 == 0 {
+            let t_ns = (c as u64 * step) / 1_000_000;
+            let lbl = format!("{}", t_ns);
+            label_line.push_str(&lbl);
+            c += lbl.len();
+        } else {
+            label_line.push(' ');
+            c += 1;
+        }
+    }
+    out.push_str(&fmt_dim(&label_line));
+    out.push('\n');
+
+    // Grid row: ┼ at deciles, · at quintiles, ─ elsewhere
+    out.push_str(&format!("  {:>width$} ", "", width = name_width));
+    let mut grid_line = String::new();
+    for c in 0..cols {
+        if c % 10 == 0 {
+            grid_line.push('┼');
+        } else if c % 5 == 0 {
+            grid_line.push('·');
+        } else {
+            grid_line.push('─');
+        }
+    }
+    out.push_str(&fmt_dim(&grid_line));
+    out.push('\n');
+}
+
+fn render_bit_wave(out: &mut String, changes: &[&ValueChange], cols: usize, step: u64) {
+    let mut wave = String::with_capacity(cols);
+    for c in 0..cols {
+        let t = c as u64 * step;
+        let next_t = (c as u64 + 1) * step;
+        let val = get_value_at(changes, t, '0');
+        let next_val = get_value_at(changes, next_t, '0');
+
+        wave.push(match (val, next_val) {
+            ('0', '0') => '_',
+            ('1', '1') => '\u{2594}',
+            ('0', '1') => '\u{2571}',
+            ('1', '0') => '\u{2572}',
+            _ => '_',
+        });
+    }
+    out.push_str(&fmt_wave(&wave));
+}
+
+fn render_bus_wave(out: &mut String, changes: &[&ValueChange], cols: usize, step: u64, width: u32) {
+    let initial = "0".repeat(width as usize);
+    let mut displayed = String::new();
+    let mut wave = String::with_capacity(cols);
+    let mut c = 0usize;
+
+    while c < cols {
+        let t = c as u64 * step;
+        let val = get_bin_value_at(changes, t, &initial);
+        let hex = bin_to_hex(&val);
+
+        if hex != displayed && !hex.is_empty() {
+            let hlen = hex.len();
+            let fit = (cols - c).min(hlen + 1);
+            if fit >= hlen {
+                wave.push_str(&hex);
+                c += hlen;
+                displayed = hex;
+                continue;
+            }
+        }
+        wave.push('\u{2581}');
+        c += 1;
+    }
+
+    out.push_str(&fmt_wave(&wave));
 }
 
 fn get_value_at(changes: &[&ValueChange], time: u64, default: char) -> char {
