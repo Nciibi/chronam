@@ -16,9 +16,7 @@ use crate::vcd::VcdData;
 fn val_at(changes: &[(u64, String)], t: u64, def: &str) -> String {
     let mut v = def.to_string();
     for (ct, cv) in changes {
-        if *ct <= t {
-            v = cv.clone();
-        }
+        if *ct <= t { v = cv.clone(); }
     }
     v
 }
@@ -35,20 +33,43 @@ fn to_hex(s: &str) -> String {
     h.trim_start_matches('0').to_string()
 }
 
-fn wave_char(changes: &[(u64, String)], t: u64, nt: u64, width: u32) -> char {
-    if width == 1 {
-        let v = val_at(changes, t, "0");
-        let nv = val_at(changes, nt, "0");
-        match (v.as_str(), nv.as_str()) {
+fn build_wave_bit(ch: &[(u64, String)], cols: usize, step: u64, t_start: u64) -> String {
+    let mut s = String::with_capacity(cols);
+    for c in 0..cols {
+        let t = t_start + c as u64 * step;
+        let nt = t + step;
+        let v = val_at(ch, t, "0");
+        let nv = val_at(ch, nt, "0");
+        s.push(match (v.as_str(), nv.as_str()) {
             ("0", "0") => '_',
             ("1", "1") => '\u{2594}',
             ("0", "1") => '\u{2571}',
             ("1", "0") => '\u{2572}',
             _ => '_',
-        }
-    } else {
-        ' ' // bus signals use hex labels instead
+        });
     }
+    s
+}
+
+fn build_wave_bus(ch: &[(u64, String)], cols: usize, step: u64, t_start: u64, width: u32) -> String {
+    let zero = "0".repeat(width as usize);
+    let mut s = String::with_capacity(cols);
+    let mut shown = String::new();
+    let mut c = 0;
+    while c < cols {
+        let t = t_start + c as u64 * step;
+        let v = val_at(ch, t, &zero);
+        let hx = to_hex(&v);
+        if hx != shown && !hx.is_empty() && cols - c >= hx.len() {
+            s.push_str(&hx);
+            c += hx.len();
+            shown = hx;
+        } else {
+            s.push('_');
+            c += 1;
+        }
+    }
+    s
 }
 
 pub fn run_interactive(data: &VcdData) -> io::Result<()> {
@@ -70,13 +91,9 @@ pub fn run_interactive(data: &VcdData) -> io::Result<()> {
     }).collect();
 
     let mut paused = false;
-    let win_len = total_fs.min(200_000_000_000); // 200 ns window
-    let step_per_col = win_len / 80u64.max(1);
-    let mut scroll_step = 2usize; // chars to scroll per frame
-    let mut time_cursor: u64 = 0; // current time at the right edge
-
-    // Each signal gets a circular buffer
-    let mut buffers: Vec<Vec<char>> = data.signals.iter().map(|_| Vec::new()).collect();
+    let win_len = total_fs.min(200_000_000_000);
+    let mut scroll_step = 3usize;
+    let mut t_start: u64 = 0;
 
     let tick = Duration::from_millis(30);
 
@@ -89,7 +106,8 @@ pub fn run_interactive(data: &VcdData) -> io::Result<()> {
                 return;
             }
 
-            let vis_signals = rows.min(data.signals.len());
+            let vis = rows.min(data.signals.len());
+            let step = win_len / cols.max(1) as u64;
 
             let dim = Style::default().fg(Color::DarkGray);
             let grn = Style::default().fg(Color::Green);
@@ -99,113 +117,55 @@ pub fn run_interactive(data: &VcdData) -> io::Result<()> {
 
             // ─── Header ───
             let play = if paused { "⏸" } else { "▶" };
-            let cur_ns = time_cursor / 1_000_000;
+            let cur_ns = (t_start + win_len / 2) / 1_000_000;
             let win_ns = win_len / 1_000_000;
             lines.push(Line::from(Span::styled(
-                format!(" {}  t = {} ns  [window: {} ns]", play, cur_ns, win_ns),
+                format!(" {}  t ≈ {} ns  │ window: {} ns │ {} sigs", play, cur_ns, win_ns, data.signals.len()),
                 bgrn,
             )));
 
-            // ─── Grow buffers to fill screen ───
-            for (i, buf) in buffers.iter_mut().enumerate() {
-                while buf.len() < cols {
-                    buf.insert(0, '_');
-                }
-                if buf.len() > cols {
-                    buf.drain(0..buf.len() - cols);
-                }
-            }
-
-            // ─── Scroll every signal's buffer ───
-            if !paused {
-                for (i, buf) in buffers.iter_mut().enumerate() {
-                    let ch = &sig_changes[i];
-                    let sig = &data.signals[i];
-                    for _ in 0..scroll_step {
-                        buf.remove(0);
-                        let t = time_cursor;
-                        let nt = time_cursor + step_per_col;
-                        let c = if sig.width == 1 {
-                            wave_char(ch, t, nt, 1)
-                        } else {
-                            ' ' // handled below via overlay
-                        };
-                        buf.push(c);
-                    }
-                }
-                time_cursor += step_per_col * scroll_step as u64;
-                if time_cursor > total_fs {
-                    time_cursor = 0;
-                    for buf in buffers.iter_mut() {
-                        buf.clear();
-                    }
-                }
-            }
-
-            // ─── Render signals ───
-            for si in 0..vis_signals {
+            // ─── Data rows ───
+            for si in 0..vis {
                 let sig = &data.signals[si];
-                let buf = &buffers[si];
-                if buf.is_empty() {
-                    continue;
-                }
+                let ch = &sig_changes[si];
                 let name = sig.name.rsplit('.').next().unwrap_or(&sig.name);
                 let depth = sig.name.chars().filter(|&c| c == '.').count();
                 let indent: String = (0..depth).map(|_| "  ").collect();
-                let label = format!("  {}{}", indent, name);
 
-                let mut wave_str: String = buf.iter().collect();
+                let wave = if sig.width == 1 {
+                    build_wave_bit(ch, cols, step, t_start)
+                } else {
+                    build_wave_bus(ch, cols, step, t_start, sig.width)
+                };
 
-                // For bus signals, overlay hex values
-                if sig.width > 1 {
-                    let ch = &sig_changes[si];
-                    let zero = "0".repeat(sig.width as usize);
-                    let mut displayed = String::new();
-                    let mut wc = 0usize;
-                    let mut new_wave = String::with_capacity(cols);
-                    while wc < cols {
-                        let t = time_cursor - (cols - wc) as u64 * step_per_col;
-                        let v = val_at(ch, t, &zero);
-                        let hx = to_hex(&v);
-                        if hx != displayed && !hx.is_empty() && cols - wc >= hx.len() {
-                            new_wave.push_str(&hx);
-                            wc += hx.len();
-                            displayed = hx;
-                        } else {
-                            new_wave.push('_');
-                            wc += 1;
-                        }
-                    }
-                    wave_str = new_wave;
-                    // Fix buffer for next frame
-                    let buf_chars: Vec<char> = wave_str.chars().collect();
-                    buffers[si] = buf_chars;
-                }
-
-                let sep = if si < vis_signals - 1 { " │ " } else { "   " };
                 lines.push(Line::from(vec![
-                    Span::styled(label, bgrn),
-                    Span::raw(sep),
-                    Span::styled(wave_str, grn),
+                    Span::styled(format!("  {}{}", indent, name), bgrn),
+                    Span::raw(" │ "),
+                    Span::styled(wave, grn),
                 ]));
             }
 
-            // Fill remaining rows
             while lines.len() < rows + 1 {
                 lines.push(Line::from(Span::raw("")));
             }
 
             // ─── Status ───
-            let status = format!(
-                "  {} signals  space:pause  ←→ speed  q:quit",
-                data.signals.len(),
-            );
-            lines.push(Line::from(Span::styled(status, dim)));
+            lines.push(Line::from(Span::styled(
+                "  space:pause  ←→ speed  q:quit",
+                dim,
+            )));
 
             f.render_widget(Paragraph::new(lines), area);
         })?;
 
         if !event::poll(tick)? {
+            if !paused {
+                let advance = step * scroll_step as u64;
+                t_start = t_start.saturating_add(advance);
+                if t_start + win_len > total_fs {
+                    t_start = 0;
+                }
+            }
             continue;
         }
 
@@ -217,21 +177,25 @@ pub fn run_interactive(data: &VcdData) -> io::Result<()> {
                     scroll_step = scroll_step.saturating_sub(1).max(1);
                 }
                 KeyCode::Char('l') | KeyCode::Right => {
-                    scroll_step = (scroll_step + 1).min(10);
+                    scroll_step = (scroll_step + 1).min(20);
                 }
                 _ => {}
             },
             Event::Mouse(m) => match m.kind {
-                MouseEventKind::ScrollDown => { scroll_step = (scroll_step + 1).min(10); }
-                MouseEventKind::ScrollUp => { scroll_step = scroll_step.saturating_sub(1).max(1); }
+                MouseEventKind::ScrollDown => {
+                    scroll_step = (scroll_step + 1).min(20);
+                }
+                MouseEventKind::ScrollUp => {
+                    scroll_step = scroll_step.saturating_sub(1).max(1);
+                }
                 _ => {}
             },
             _ => {}
         }
     }
 
-    disable_raw_mode()?;
     io::stdout().execute(DisableMouseCapture)?;
+    disable_raw_mode()?;
     io::stdout().execute(LeaveAlternateScreen)?;
     Ok(())
 }
