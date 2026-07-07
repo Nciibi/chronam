@@ -164,7 +164,7 @@ pub fn resolve_sources(patterns: &[String], base_dir: Option<&PathBuf>) -> Resul
     let mut seen: HashSet<PathBuf> = HashSet::new();
     for pattern in patterns {
         let full_pattern = base_dir
-            .filter(|_| !pattern.starts_with('/') && !pattern.starts_with(r"\"))
+            .filter(|_| !pattern.starts_with('/') && !pattern.starts_with('\\'))
             .map(|d| d.join(pattern).to_string_lossy().to_string())
             .unwrap_or_else(|| pattern.clone());
         let entries = glob::glob(&full_pattern)
