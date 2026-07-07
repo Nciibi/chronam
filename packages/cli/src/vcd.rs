@@ -182,7 +182,7 @@ fn render_bit_signal(out: &mut String, changes: &[&ValueChange], cols: usize, st
 
 fn render_bus_signal(out: &mut String, changes: &[&ValueChange], cols: usize, step: u64, width: u32, _max_fs: u64) {
     let initial = "0".repeat(width as usize);
-    let mut displayed_hex = String::new();
+    let mut display_buf = String::new();
     let mut c = 0usize;
 
     while c < cols {
@@ -190,18 +190,27 @@ fn render_bus_signal(out: &mut String, changes: &[&ValueChange], cols: usize, st
         let val = get_bin_value_at(changes, t, &initial);
         let hex = bin_to_hex(&val);
 
-        if hex != displayed_hex {
-            for (i, ch) in hex.chars().enumerate() {
-                if c + i < cols {
-                    out.push(ch);
-                }
-            }
-            displayed_hex = hex;
-            c += displayed_hex.len();
+        if hex != display_buf {
+            print_hex_val(out, &hex, c, cols, &mut c);
+            display_buf = hex;
         } else {
             out.push('_');
             c += 1;
         }
+    }
+}
+
+fn print_hex_val(out: &mut String, hex: &str, _col: usize, cols: usize, c: &mut usize) {
+    let hlen = hex.len();
+    if *c + hlen < cols {
+        out.push_str(hex);
+        *c += hlen;
+    } else {
+        let remain = cols - *c;
+        for ch in hex.chars().take(remain) {
+            out.push(ch);
+        }
+        *c += remain;
     }
 }
 
