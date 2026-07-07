@@ -180,31 +180,28 @@ fn render_bit_signal(out: &mut String, changes: &[&ValueChange], cols: usize, st
     }
 }
 
-fn render_bus_signal(out: &mut String, changes: &[&ValueChange], cols: usize, step: u64, width: u32, max_fs: u64) {
-    let mut last_hex = String::new();
-    let mut pos = 0u64;
+fn render_bus_signal(out: &mut String, changes: &[&ValueChange], cols: usize, step: u64, width: u32, _max_fs: u64) {
+    let initial = "0".repeat(width as usize);
+    let mut displayed_hex = String::new();
     let mut c = 0usize;
 
     while c < cols {
         let t = c as u64 * step;
-        let val = get_bin_value_at(changes, t, &"0".repeat(width as usize));
+        let val = get_bin_value_at(changes, t, &initial);
         let hex = bin_to_hex(&val);
 
-        if hex != last_hex && (t - pos > step * 2 || c == cols - 1 || c == 0) {
+        if hex != displayed_hex {
             for (i, ch) in hex.chars().enumerate() {
                 if c + i < cols {
                     out.push(ch);
-                    last_hex = ch.to_string();
                 }
             }
-            let skip = hex.len().saturating_sub(1);
-            c += skip;
-            pos = t;
-            last_hex = hex;
-        } else if hex == last_hex || c != 0 {
+            displayed_hex = hex;
+            c += displayed_hex.len();
+        } else {
             out.push('_');
+            c += 1;
         }
-        c += 1;
     }
 }
 
