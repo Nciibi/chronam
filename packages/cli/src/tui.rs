@@ -96,6 +96,7 @@ pub fn run_interactive(data: &VcdData) -> io::Result<()> {
     let mut t_start: u64 = 0;
 
     let tick = Duration::from_millis(30);
+    let mut prev_cols = 80usize;
 
     loop {
         terminal.draw(|f| {
@@ -105,6 +106,7 @@ pub fn run_interactive(data: &VcdData) -> io::Result<()> {
             if cols < 10 || rows < 2 || data.signals.is_empty() {
                 return;
             }
+            prev_cols = cols;
 
             let vis = rows.min(data.signals.len());
             let step = win_len / cols.max(1) as u64;
@@ -160,6 +162,7 @@ pub fn run_interactive(data: &VcdData) -> io::Result<()> {
 
         if !event::poll(tick)? {
             if !paused {
+                let step = win_len / prev_cols.max(1) as u64;
                 let advance = step * scroll_step as u64;
                 t_start = t_start.saturating_add(advance);
                 if t_start + win_len > total_fs {
