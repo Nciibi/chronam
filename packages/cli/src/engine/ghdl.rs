@@ -1,4 +1,5 @@
 use anyhow::{Result, Context, bail};
+use std::fs;
 use std::path::Path;
 use std::process::Command;
 use std::sync::OnceLock;
@@ -81,9 +82,9 @@ pub fn analyze(source: &Path, work_dir: &Path, vhdl_std: &str) -> Result<(u32, u
     let std_flag = format!("--std={}", ghdl_std(vhdl_std));
     let abs_source = std::path::absolute(source)
         .unwrap_or_else(|_| source.to_path_buf());
+    fs::create_dir_all(work_dir).ok();
     let output = Command::new(binary_path())
-        .args(["-a", &std_flag, "--workdir=."])
-        .arg(&abs_source)
+        .args(["-a", &std_flag, "--workdir=.", &abs_source.to_string_lossy()])
         .current_dir(work_dir)
         .output()
         .with_context(|| format!("Failed to run GHDL analyze on {}", source.display()))?;
@@ -103,9 +104,9 @@ pub fn analyze_syntax(source: &Path, work_dir: &Path, vhdl_std: &str) -> Result<
     let std_flag = format!("--std={}", ghdl_std(vhdl_std));
     let abs_source = std::path::absolute(source)
         .unwrap_or_else(|_| source.to_path_buf());
+    fs::create_dir_all(work_dir).ok();
     let output = Command::new(binary_path())
-        .args(["-a", &std_flag, "--workdir=."])
-        .arg(&abs_source)
+        .args(["-a", &std_flag, "--workdir=.", &abs_source.to_string_lossy()])
         .current_dir(work_dir)
         .output()
         .with_context(|| format!("Failed to run GHDL syntax check on {}", source.display()))?;
@@ -127,6 +128,7 @@ pub fn analyze_syntax(source: &Path, work_dir: &Path, vhdl_std: &str) -> Result<
 
 pub fn elaborate(entity: &str, work_dir: &Path, vhdl_std: &str) -> Result<(u32, u32)> {
     let std_flag = format!("--std={}", ghdl_std(vhdl_std));
+    fs::create_dir_all(work_dir).ok();
     let output = Command::new(binary_path())
         .args(["-e", &std_flag, "--workdir=.", entity])
         .current_dir(work_dir)
@@ -175,6 +177,7 @@ pub fn run(entity: &str, work_dir: &Path, vhdl_std: &str, duration_ns: u64, wave
         }
     }
 
+    fs::create_dir_all(work_dir).ok();
     let output = Command::new(binary_path())
         .args(&args)
         .current_dir(work_dir)
