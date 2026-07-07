@@ -83,7 +83,8 @@ pub fn run(args: &SimulateArgs, cli: &Cli) -> Result<()> {
             println!();
             match crate::vcd::parse(std::path::Path::new(vcd)) {
                 Ok(data) => {
-                    let diagram = crate::vcd::render_timing_diagram(&data, &[], args.duration_ns);
+                    let view_ns = args.duration_ns.min(200);
+                    let diagram = crate::vcd::render_timing_diagram(&data, &[], view_ns);
                     println!("{}", diagram);
                 }
                 Err(e) => {
