@@ -18,23 +18,20 @@ pub struct ValueChange {
 
 #[derive(Debug, Clone)]
 pub struct VcdData {
-    pub timescale: String,
     pub signals: Vec<Signal>,
     pub id_to_signal: HashMap<String, Signal>,
     pub changes: Vec<ValueChange>,
 }
 
-const GRN: &str = "\x1b[32m";
-const BGRN: &str = "\x1b[92m";
-const DIMGRN: &str = "\x1b[2;32m";
-const RESET: &str = "\x1b[0m";
+fn grn(s: &str) -> String { format!("\x1b[32m{}\x1b[0m", s) }
+fn bgrn(s: &str) -> String { format!("\x1b[92m{}\x1b[0m", s) }
+fn dim_grn(s: &str) -> String { format!("\x1b[2;32m{}\x1b[0m", s) }
 
 pub fn parse(path: &Path) -> Result<VcdData> {
     let content = std::fs::read_to_string(path)?;
     let mut signals = Vec::new();
     let mut id_to_signal = HashMap::new();
     let mut changes = Vec::new();
-    let mut timescale = String::new();
     let mut in_header = true;
     let mut scope_stack: Vec<String> = vec!["".to_string()];
     let mut current_time: u64 = 0;
@@ -44,26 +41,24 @@ pub fn parse(path: &Path) -> Result<VcdData> {
         if line.is_empty() { continue; }
 
         if in_header {
-            if line.starts_with("$timescale") {
-                timescale = line
-                    .trim_start_matches("$timescale")
-                    .trim_end_matches("$end").trim().to_string();
-            } else if line.starts_with("$scope") {
-                let parts: Vec<&str> = line.split_whitespace().collect();
-                if parts.len() >= 3 { scope_stack.push(parts[2].to_string()); }
+            if line.starts_with("$scope") {
+                if let Some(name) = line.split_whitespace().nth(2) {
+                    scope_stack.push(name.to_string());
+                }
             } else if line.starts_with("$upscope") {
                 scope_stack.pop();
             } else if line.starts_with("$var") {
                 let parts: Vec<&str> = line.split_whitespace().collect();
                 if parts.len() >= 4 {
-                    let _var_type = parts[1];
                     let width: u32 = parts[2].parse().unwrap_or(1);
                     let id = parts[3].to_string();
                     let name = if parts.len() > 4 { parts[4].to_string() }
                                 else { format!("unnamed_{}", id) };
-                    let scope = scope_stack.join(".");
-                    let full_name = if scope.is_empty() { name }
-                                    else { format!("{}.{}", scope, name) };
+                    let full_name = if scope_stack.len() > 1 {
+                        format!("{}.{}", scope_stack[1..].join("."), name)
+                    } else {
+                        name
+                    };
                     let sig = Signal { name: full_name, width, id: id.clone() };
                     signals.push(sig.clone());
                     id_to_signal.insert(id, sig);
@@ -88,18 +83,154 @@ pub fn parse(path: &Path) -> Result<VcdData> {
                     value: val.trim().to_string(),
                 });
             }
-        } else if line.len() == 2 || line.len() == 1 {
-            let val = &line[..line.len() - 1];
-            let id = &line[line.len() - 1..];
-            changes.push(ValueChange {
-                time: current_time,
-                id: id.to_string(),
-                value: val.to_string(),
-            });
+        } else if line.len() <= 2 {
+            let val = &line[..line.len().saturating_sub(1)];
+            let id = &line[line.len().saturating_sub(1)..];
+            if !id.is_empty() {
+                changes.push(ValueChange {
+                    time: current_time,
+                    id: id.to_string(),
+                    value: if val.is_empty() { "0".to_string() } else { val.to_string() },
+                });
+            }
         }
     }
 
-    Ok(VcdData { timescale, signals, id_to_signal, changes })
+    Ok(VcdData { signals, id_to_signal, changes })
+}
+
+fn terminal_cols() -> usize {
+    if let Ok((w, _)) = crossterm::terminal::size() {
+        return w as usize;
+    }
+    std::env::var("COLUMNS").ok().and_then(|s| s.parse().ok()).unwrap_or(120)
+}
+
+fn build_tree(signals: &[Signal]) -> Vec<(usize, &Signal)> {
+    struct Node<'a> {
+        depth: usize,
+        sig: &'a Signal,
+        name_part: &'a str,
+    }
+
+    let mut roots: Vec<Vec<Node>> = Vec::new();
+    let mut sigs: Vec<(&Signal, Vec<&str>)> = signals.iter().map(|s| {
+        let parts: Vec<&str> = s.name.split('.').collect();
+        (s, parts)
+    }).collect();
+
+    sigs.sort_by(|a, b| a.1.cmp(&b.1));
+
+    let mut result = Vec::new();
+    for (sig, parts) in &sigs {
+        let depth = parts.len().saturating_sub(1);
+        result.push((depth, *sig));
+    }
+    result
+}
+
+fn render_time_ruler(cols: usize, step: u64) -> String {
+    let mut out = String::new();
+    out.push_str(&format!("  {:>24} ", dim_grn("ns")));
+
+    let mut c = 0usize;
+    while c < cols {
+        if c % 10 == 0 {
+            let t_ns = (c as u64 * step) / 1_000_000;
+            let label = format!("{}", t_ns);
+            out.push_str(&dim_grn(&label));
+            c += label.len();
+        } else if c % 5 == 0 {
+            out.push_str(&dim_grn("·"));
+            c += 1;
+        } else {
+            out.push(' ');
+            c += 1;
+        }
+    }
+    out.push('\n');
+
+    out.push_str(&format!("  {:>24} ", ""));
+    for c in 0..cols {
+        if c % 10 == 0 {
+            out.push_str(&dim_grn("┼"));
+        } else if c % 5 == 0 {
+            out.push_str(&dim_grn("·"));
+        } else {
+            out.push_str(&dim_grn("─"));
+        }
+    }
+    out.push('\n');
+
+    out
+}
+
+fn render_bit_signal(changes: &[&ValueChange], cols: usize, step: u64) -> String {
+    let mut out = String::new();
+
+    let mut prev_val = get_value_at(changes, 0, '0');
+    for c in 0..cols {
+        let t = c as u64 * step;
+        let val = get_value_at(changes, t, '0');
+        let next_t = ((c as u64 + 1) * step);
+        let next_val = get_value_at(changes, next_t, '0');
+
+        let ch = match (val, next_val) {
+            ('0', '0') => '_',
+            ('1', '1') => '\u{2594}',
+            ('0', '1') => '\u{2571}',
+            ('1', '0') => '\u{2572}',
+            _ => '_',
+        };
+        out.push(ch);
+        prev_val = val;
+    }
+
+    grn(&out)
+}
+
+fn render_bus_signal(changes: &[&ValueChange], cols: usize, step: u64, width: u32) -> String {
+    let initial = "0".repeat(width as usize);
+    let mut displayed = String::new();
+    let mut out = String::new();
+    let mut c = 0usize;
+
+    while c < cols {
+        let t = c as u64 * step;
+        let val = get_bin_value_at(changes, t, &initial);
+        let hex = bin_to_hex(&val);
+
+        if hex != displayed {
+            let hlen = hex.len();
+            let end = (c + hlen).min(cols);
+            let space = end - c;
+            if hlen > 0 && space >= hlen.saturating_sub(1) {
+                let label = if hlen == 1 {
+                    format!("{}", &hex[..space.min(hlen)])
+                } else if space >= hlen {
+                    let mut s = String::new();
+                    s.push_str(&hex[..1]);
+                    for i in 1..hlen {
+                        s.push(' ');
+                        if i < space {
+                            s.push_str(&hex[i..=i]);
+                        }
+                    }
+                    s
+                } else {
+                    hex.chars().take(space).collect()
+                };
+                out.push_str(&grn(&label));
+                c += end - c;
+                displayed = hex;
+                continue;
+            }
+        }
+        out.push_str(&grn("▁"));
+        c += 1;
+    }
+
+    out
 }
 
 pub fn render_timing_diagram(data: &VcdData, signal_names: &[String], time_window_ns: u64) -> String {
@@ -115,133 +246,52 @@ pub fn render_timing_diagram(data: &VcdData, signal_names: &[String], time_windo
         signal_filter = data.signals.iter().collect();
     }
 
+    let cols = terminal_cols().saturating_sub(28).max(20);
+
     let max_time_fs = time_window_ns * 1_000_000;
-    let num_cols = 80usize.min((max_time_fs / 100_000) as usize + 1).max(10);
-    let time_step = (max_time_fs / num_cols as u64).max(1);
+    let time_step = (max_time_fs / cols as u64).max(1);
 
     let mut out = String::new();
-    let name_width = 24usize;
+    let timeline = render_time_ruler(cols, time_step);
+    out.push_str(&timeline);
 
-    // Title bar
-    let title = format!("{}Waveform Viewer{}  {} window", BGRN, RESET, fmt_time(time_window_ns));
-    out.push_str(&format!("  {}\n\n", title));
+    let tree = build_tree(data.signals.iter().collect::<Vec<_>>().as_slice());
+    let tree_lookup: HashMap<&str, usize> = tree.iter()
+        .map(|(d, s)| (s.id.as_str(), *d))
+        .collect();
 
-    // Build change maps per signal for O(1) lookup
-    let mut sig_map: HashMap<&str, Vec<&ValueChange>> = HashMap::new();
     for sig in &signal_filter {
-        let sc: Vec<&ValueChange> = data.changes.iter().filter(|c| c.id == sig.id).collect();
-        sig_map.insert(&sig.id, sc);
-    }
-
-    // Per-signal rendering
-    for sig in &signal_filter {
-        let changes = sig_map.get(sig.id.as_str()).unwrap();
-
-        // Signal name label
-        let label = if sig.name.len() > name_width {
-            format!("...{}", &sig.name[sig.name.len()-name_width+3..])
+        let depth = tree_lookup.get(sig.id.as_str()).copied().unwrap_or(0);
+        let prefix = if depth == 0 {
+            String::new()
+        } else if depth <= 2 {
+            "  ".repeat(depth)
         } else {
-            sig.name.clone()
+            "  ".repeat(2) + "…" + &"  ".repeat(depth - 2)
         };
 
-        out.push_str(&format!("  {}{:>width$}{} {}",
-            BGRN, label, RESET, GRN, width = name_width));
+        let display_name = if let Some(dot) = sig.name.rfind('.') {
+            &sig.name[dot + 1..]
+        } else {
+            &sig.name
+        };
+
+        let name_str = format!("{}{}", prefix, display_name);
+        out.push_str(&format!("  {} │ ", bgrn(&format!("{:>24}", name_str))));
+
+        let changes: Vec<&ValueChange> = data.changes.iter()
+            .filter(|c| c.id == sig.id)
+            .collect();
 
         if sig.width == 1 {
-            render_bit_signal(&mut out, changes, num_cols, time_step, max_time_fs);
+            out.push_str(&render_bit_signal(&changes, cols, time_step));
         } else {
-            render_bus_signal(&mut out, changes, num_cols, time_step, sig.width, max_time_fs);
+            out.push_str(&render_bus_signal(&changes, cols, time_step, sig.width));
         }
-
-        out.push_str(&format!("{}\n", RESET));
+        out.push('\n');
     }
-
-    // Time axis
-    render_time_axis(&mut out, num_cols, time_step, name_width);
 
     out
-}
-
-fn render_bit_signal(out: &mut String, changes: &[&ValueChange], cols: usize, step: u64, max_fs: u64) {
-    for c in 0..cols {
-        let t = c as u64 * step;
-        let next_t = ((c as u64 + 1) * step).min(max_fs);
-        let val = get_value_at(changes, t, '0');
-        let next_val = get_value_at(changes, next_t, '0');
-
-        let ch = match (val, next_val) {
-            ('0', '0') => '_',
-            ('1', '1') => '\u{2594}',
-            ('0', '1') => '\u{256D}',
-            ('1', '0') => '\u{2570}',
-            _ => '_',
-        };
-        out.push(ch);
-    }
-}
-
-fn render_bus_signal(out: &mut String, changes: &[&ValueChange], cols: usize, step: u64, width: u32, _max_fs: u64) {
-    let initial = "0".repeat(width as usize);
-    let mut display_buf = String::new();
-    let mut c = 0usize;
-
-    while c < cols {
-        let t = c as u64 * step;
-        let val = get_bin_value_at(changes, t, &initial);
-        let hex = bin_to_hex(&val);
-
-        if hex != display_buf {
-            print_hex_val(out, &hex, c, cols, &mut c);
-            display_buf = hex;
-        } else {
-            out.push('_');
-            c += 1;
-        }
-    }
-}
-
-fn print_hex_val(out: &mut String, hex: &str, _col: usize, cols: usize, c: &mut usize) {
-    let hlen = hex.len();
-    if *c + hlen < cols {
-        out.push_str(hex);
-        *c += hlen;
-    } else {
-        let remain = cols - *c;
-        for ch in hex.chars().take(remain) {
-            out.push(ch);
-        }
-        *c += remain;
-    }
-}
-
-fn render_time_axis(out: &mut String, cols: usize, step: u64, name_width: usize) {
-    // Time labels
-    out.push_str(&format!("  {:>width$} {}{}", "Time", DIMGRN, RESET, width = name_width));
-    for c in 0..cols {
-        if c % 10 == 0 {
-            let t_ns = (c as u64 * step) / 1_000_000;
-            let label = format!("{}", t_ns);
-            out.push_str(&format!("{}{}{}", DIMGRN, label, RESET));
-            let skip = label.len().saturating_sub(1);
-            for _ in 0..skip {
-                if c + 1 < cols { out.push(' '); }
-            }
-        } else {
-            out.push_str(&format!("{}·{}", DIMGRN, RESET));
-        }
-    }
-    out.push('\n');
-
-    // Grid line
-    out.push_str(&format!("  {:>width$} {}", "", DIMGRN, width = name_width));
-    for c in 0..cols {
-        if c % 10 == 0 {
-            out.push('|');
-        } else {
-            out.push('─');
-        }
-    }
-    out.push_str(&format!("{}\n", RESET));
 }
 
 fn get_value_at(changes: &[&ValueChange], time: u64, default: char) -> char {
@@ -271,14 +321,4 @@ fn bin_to_hex(bin: &str) -> String {
         hex.push_str(&format!("{:X}", val));
     }
     hex.trim_start_matches('0').to_string()
-}
-
-fn fmt_time(ns: u64) -> String {
-    if ns >= 1_000_000 {
-        format!("{} ms", ns / 1_000_000)
-    } else if ns >= 1_000 {
-        format!("{} us", ns / 1_000)
-    } else {
-        format!("{} ns", ns)
-    }
 }
