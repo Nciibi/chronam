@@ -150,6 +150,7 @@ fn find_project_config() -> Result<PathBuf> {
         simulation: SimulationSection::default(),
         devices: DevicesSection::default(),
         timing: TimingSection::default(),
+        config_dir: None,
     };
     let toml_str = toml::to_string_pretty(&config)?;
     let path = cwd.join("chronam.toml");
@@ -161,8 +162,6 @@ fn find_project_config() -> Result<PathBuf> {
 pub fn resolve_sources(patterns: &[String], base_dir: Option<&PathBuf>) -> Result<Vec<PathBuf>> {
     let mut files: Vec<PathBuf> = Vec::new();
     let mut seen: HashSet<PathBuf> = HashSet::new();
-    let cwd = std::env::current_dir().unwrap_or_default();
-
     for pattern in patterns {
         let full_pattern = base_dir
             .filter(|_| !pattern.starts_with('/') && !pattern.starts_with(r"\"))
