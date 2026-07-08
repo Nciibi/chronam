@@ -34,6 +34,11 @@ pub fn run(tb_path: &str, _cli: &Cli) -> Result<()> {
     let abs_work = std::path::absolute(work_dir)
         .unwrap_or_else(|_| work_dir.to_path_buf());
 
+    // Start from a clean GHDL work library. Stale .cf units from a previous
+    // run cause spurious "architecture ... obsoleted by entity ..." clashes
+    // during elaboration.
+    let _ = crate::engine::ghdl::clean(&abs_work);
+
     // Gather VHDL sources: testbench directory + its parent (for the original design files)
     let mut sources: Vec<std::path::PathBuf> = Vec::new();
     let parent_dir = abs_work.parent().map(|p| p.to_path_buf()).unwrap_or_else(|| std::path::PathBuf::from("."));
