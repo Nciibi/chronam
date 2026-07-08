@@ -70,15 +70,10 @@ fn extract_entity(content: &str) -> Option<String> {
 fn extract_ports(content: &str) -> Vec<Port> {
     let mut ports = Vec::new();
 
-    let re = regex_lite::Regex::new(
-        r"(?is)port\s*\((.+?)\)\s*;"
-    ).ok();
-    let block = match re {
-        Some(r) => r.captures(content).map(|c| c[1].to_string()),
-        None => return ports,
-    };
-    let block = match block {
-        Some(b) => b,
+    // Find the port block with proper parenthesis depth tracking
+    let port_start = find_port_block_start(content);
+    let block = match port_start {
+        Some(start) => extract_block(content, start),
         None => return ports,
     };
 
@@ -90,9 +85,7 @@ fn extract_ports(content: &str) -> Vec<Port> {
             ')' if depth > 0 => depth -= 1,
             _ => {}
         }
-        if depth > 0 {
-            buf.push(ch);
-        } else if ch == ';' {
+        if ch == ';' && depth == 0 {
             if let Some(p) = parse_port_line(&buf) {
                 ports.push(p);
             }
@@ -108,6 +101,40 @@ fn extract_ports(content: &str) -> Vec<Port> {
     }
 
     ports
+}
+
+fn find_port_block_start(content: &str) -> Option<usize> {
+    let re = regex_lite::Regex::new(r"(?is)\bport\s*\(").ok()?;
+    re.captures(content).and_then(|c| {
+        let m = c.get(0)?;
+        Some(m.end() - 1) // position of the '('
+    })
+}
+
+fn extract_block(content: &str, open_paren: usize) -> Option<String> {
+    let chars: Vec<char> = content.chars().collect();
+    if open_paren >= chars.len() || chars[open_paren] != '(' {
+        return None;
+    }
+    let mut depth = 0u32;
+    let mut end = open_paren;
+    for (i, &ch) in chars.iter().enumerate().skip(open_paren) {
+        match ch {
+            '(' => depth += 1,
+            ')' => {
+                depth -= 1;
+                if depth == 0 {
+                    end = i;
+                    break;
+                }
+            }
+            _ => {}
+        }
+    }
+    if depth != 0 {
+        return None;
+    }
+    Some(content[open_paren + 1..end].to_string())
 }
 
 #[derive(Debug)]
