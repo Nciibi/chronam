@@ -71,9 +71,12 @@ fn extract_ports(content: &str) -> Vec<Port> {
     let mut ports = Vec::new();
 
     // Find the port block with proper parenthesis depth tracking
-    let port_start = find_port_block_start(content);
-    let block = match port_start {
-        Some(start) => extract_block(content, start),
+    let port_start = match find_port_block_start(content) {
+        Some(s) => s,
+        None => return ports,
+    };
+    let block = match extract_block(content, port_start) {
+        Some(b) => b,
         None => return ports,
     };
 
