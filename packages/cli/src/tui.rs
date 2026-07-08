@@ -327,6 +327,12 @@ fn draw_trace(
 
         let y = match v {
             None => {
+                // Undefined (U/X/Z): draw a distinct dashed marker on the
+                // midline so the signal is visibly "present but undefined"
+                // instead of looking like an empty, missing band.
+                let my = mid;
+                grid[my][x] = '╌';
+                colors[my][x] = app.theme.unknown;
                 prev_y = None;
                 continue;
             }
