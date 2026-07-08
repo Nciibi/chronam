@@ -256,7 +256,7 @@ fn draw_waveform_area(f: &mut Frame, app: &App, area: Rect) {
         }
 
         // 3) Bright "head" dot at the sweep (now) position.
-        draw_head(&mut grid, &mut colors, row_off, h, width, i, color, app, left_edge_time);
+        draw_head(&mut grid, &mut colors, row_off, h, width, i, app, left_edge_time);
 
         row_off += h;
     }
