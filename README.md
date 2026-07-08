@@ -14,142 +14,181 @@
   <br />
 </div>
 
-Chronam is a high-performance, cross-platform VHDL development environment. It combines a **VS Code extension** for interactive editing and waveform viewing with a **standalone Rust CLI** for build automation and CI/CD pipelines — all powered by GHDL.
+**Chronam** is a high-performance, cross-platform VHDL development environment. It pairs a
+**VS Code extension** for interactive editing and waveform viewing with a **standalone Rust CLI**
+for build automation, simulation, and CI/CD — all powered by [GHDL](https://ghdl.github.io/ghdl/).
 
-Write VHDL, press Run, and analyze the waveforms natively in VS Code — or run `chronam build` in your terminal.
+Write VHDL, run a simulation, and inspect the resulting waveforms natively in your terminal or editor —
+no external viewers, no block-art hacks, no synthetic data.
 
 ---
 
-## 📦 Products
+## ✨ Features
 
 ### VS Code Extension
-
-- 🚀 **One-Click Simulation** — Hit `▶ Run Simulation` to compile, elaborate, and simulate via GHDL.
-- ⚡ **Lightning-Fast Wave Viewer** — Custom HTML5 Canvas 2D waveform renderer handles 1,000+ signals with zero lag. Adaptive zoom, pan, and cursor measurements.
-- 🧠 **Smart Entity Detection** — Regex-based parser extracts entities, ports, architectures, and internal signals on the fly.
-- 📝 **Auto-Testbench Generation** — Select an entity, and Chronam writes the boilerplate with clock/reset stimulus.
-- 🛡️ **Human-Readable Errors** — Cryptic GHDL `stderr` output is translated into inline VS Code Diagnostics.
+- 🚀 **One-Click Simulation** — `▶ Run Simulation` compiles, elaborates, and simulates through GHDL.
+- ⚡ **Lightning-Fast Wave Viewer** — a custom HTML5 Canvas 2D renderer handles 1,000+ signals with zero lag, adaptive zoom/pan, and cursor measurements.
+- 🧠 **Smart Entity Detection** — extracts entities, ports, architectures, and internal signals on the fly.
+- 📝 **Auto-Testbench Generation** — select an entity and Chronam writes the clock/reset stimulus boilerplate.
+- 🛡️ **Human-Readable Errors** — cryptic GHDL `stderr` output is translated into inline Diagnostics.
 
 ### CLI (`chronam`)
+A professional Rust CLI for headless automation and interactive waveform viewing:
+- 🔧 **Testbench Scaffolding** — generate a build-ready testbench from any entity in one command.
+- 🏃 **End-to-End Simulation** — `analyze → elaborate → run → view`, in a single call.
+- 📈 **Terminal Wave Viewer (TUI)** — a medical-monitor-style waveform browser rendered with [ratatui](https://ratatui.rs/).
+- 🧪 **Built-in Demo** — launch a synthetic heart-monitor waveform with `wave --mock`.
+- 🤖 **CI-Ready** — `build`, `test`, `lint`, `simulate`, and `watch` for pipelines.
 
-A professional Rust CLI for headless build automation, CI/CD, simulation, and interactive waveform viewing:
+---
 
-#### Quick Workflow
+## 🚀 Quick Start
 
+### 1. Prerequisites
+- **Rust 1.81+** — install from [rustup.rs](https://rustup.rs).
+- **GHDL** on your `PATH` (or set `GHDL_PATH`). Download from [ghdl.github.io](https://ghdl.github.io/ghdl/).
+- *(VS Code extension only)* Visual Studio Code.
+
+Verify your toolchain:
 ```bash
-# Generate a testbench from your VHDL design
-chronam counter.vhdl
-
-# Edit the generated testbench (counter_sim/testbench_counter.vhdl),
-# then run simulation + TUI wave viewer:
-chronam --run-sim counter_sim/testbench_counter.vhdl
+cargo --version
+ghdl --version
 ```
 
-#### Commands
+### 2. Build from source
+
+```bash
+git clone https://github.com/Nciibi/chronam.git
+cd chronam
+```
+
+Then build the CLI:
+
+```bash
+# From the repository root
+cargo build --manifest-path packages/cli/Cargo.toml
+
+# …or step into the package first
+cd packages/cli
+cargo build
+```
+
+The binary is produced at:
+
+| Profile | Path |
+|---------|------|
+| Debug   | `packages/cli/target/debug/chronam[.exe]` |
+| Release | `packages/cli/target/release/chronam[.exe]` |
+
+> 💡 For daily use, build once with `cargo build --release` (or `cargo install --path packages/cli`)
+> and run `chronam` from anywhere. The examples below use the **full binary path** so they work
+> without adding anything to `PATH`.
+
+### 3. Run your first simulation
+
+From the **repository root**, run the bundled demo testbench:
+
+```bash
+# Windows
+D:\projects\chronam\packages\cli\target\debug\chronam.exe --run-sim demo_sim/testbench_demo.vhdl
+
+# macOS / Linux
+./packages/cli/target/debug/chronam --run-sim demo_sim/testbench_demo.vhdl
+```
+
+Or with your own design — generate a testbench, add stimulus, then simulate:
+
+```bash
+cd <your code directory>
+
+# 1. Generate a testbench skeleton in <entity>_sim/
+D:\projects\chronam\packages\cli\target\debug\chronam.exe my_design.vhdl
+#   → creates my_design_sim/testbench_my_design.vhdl
+
+# 2. Edit the testbench to add your stimulus, then:
+D:\projects\chronam\packages\cli\target\debug\chronam.exe --run-sim my_design_sim/testbench_my_design.vhdl
+```
+
+This command:
+1. Cleans any stale GHDL work library.
+2. Analyzes **all** VHDL sources (design under test **before** the testbench).
+3. Elaborates the testbench entity.
+4. Runs the GHDL simulation and writes a VCD.
+5. Launches the interactive terminal wave viewer with the real captured data.
+
+Press `Space` to pause/resume, arrow keys to navigate, and `q` to quit.
+
+---
+
+## 📦 Command Reference
 
 | Command / Flag | Description |
 |---------|-------------|
 | `chronam <file>.vhdl` | Generate a testbench skeleton in `<entity>_sim/` |
-| `chronam --run-sim <testbench>` | Run GHDL simulation then launch TUI wave viewer |
-| `chronam wave [VCD_PATH]` | Open a VCD file in the TUI viewer |
-| `chronam wave --mock` | Launch built-in hospital heart-monitor demo |
-| `chronam simulate <entity>` | Run simulation and export waveforms |
-| `chronam new`    | Scaffold a new VHDL project |
-| `chronam build`  | Compile and elaborate all sources |
-| `chronam test`   | Auto-discover and run testbenches |
-| `chronam lint`   | Syntax-check all source files |
+| `chronam --run-sim <testbench>` | Analyze, elaborate, simulate via GHDL, then launch the TUI wave viewer |
+| `chronam wave [VCD_PATH]` | Open an existing VCD file in the TUI viewer |
+| `chronam wave --mock` | Launch the built-in hospital heart-monitor demo |
+| `chronam simulate <entity>` | Run a simulation and export waveforms |
+| `chronam new` | Scaffold a new VHDL project |
+| `chronam build` | Compile and elaborate all sources |
+| `chronam test` | Auto-discover and run testbenches |
+| `chronam lint` | Syntax-check all source files |
 | `chronam compile` | Compile individual files |
-| `chronam clean`  | Remove build artifacts |
-| `chronam doctor` | Diagnose environment (GHDL, Git, etc.) |
-| `chronam watch`  | Rebuild on file changes |
-| `chronam info`   | Show project metadata |
+| `chronam clean` | Remove build artifacts |
+| `chronam doctor` | Diagnose the environment (GHDL, Git, etc.) |
+| `chronam watch` | Rebuild on file changes |
+| `chronam info` | Show project metadata |
 | `chronam completion` | Generate shell completions |
 
-#### TUI Wave Viewer Controls
+### TUI Wave Viewer Controls
 
 | Key | Action |
 |-----|--------|
-| `Space` | Pause / resume simulation |
+| `Space` | Pause / resume the sweep |
 | `↑` / `↓` | Select signal |
-| `+` / `-` | Increase / decrease speed |
-| `z` / `x` | Zoom in / out |
-| `←` / `→` | Move cursor |
-| `h` | Toggle help |
+| `+` / `-` | Increase / decrease playback speed |
+| `z` / `x` | Zoom in / out (time per character) |
+| `←` / `→` | Move the measurement cursor |
+| `h` | Toggle the help bar |
 | `q` / `Esc` / `Ctrl+C` | Quit |
 
-The viewer renders all signals as continuous thin-line traces (medical monitor style)
-with a persistent bottom command bar. Real VCD data from GHDL is displayed via
-`VcdSource` — no synthetic data, no block characters.
+The viewer renders every signal as a continuous thin-line trace (medical-monitor style) with its
+label aligned to its own band. Real VCD data from GHDL is displayed through `VcdSource` — no
+synthetic data. Signals that are **undefined** (`U`/`X`/`Z`) in the simulation are shown as a
+distinct orange dashed line so you can see the band exists but was never driven.
 
-All commands feature colored output, rich tables, progress bars, and actionable error messages.
+---
 
-## 🚀 Getting Started
+## 🩺 Troubleshooting
 
-### VS Code Extension
-
-1. Install **GHDL** and add it to your `PATH`.
-2. Install **Chronam** from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=Nciibi.chronam).
-3. Open any `.vhd` or `.vhdl` file — CodeLens buttons appear above each entity.
-
-### CLI
-
+**`ghdl: command not found`**
+Install GHDL and ensure it is on your `PATH`, or point Chronam at it:
 ```bash
-# Install via Cargo (requires Rust 1.81+)
-cargo install chronam
-
-# Or build from source
-git clone https://github.com/Nciibi/chronam.git
-cd chronam/packages/cli
-cargo build --release
-./target/release/chronam --help
-
-# Quick start — generate testbench, then simulate with live waveforms:
-chronam my_design.vhdl
-#  → creates my_design_sim/testbench_my_design.vhdl
-#  → edit to add stimulus, then:
-chronam --run-sim my_design_sim/testbench_my_design.vhdl
-#  → analyzes, elaborates, runs GHDL simulation
-#  → launches interactive terminal wave viewer
+export GHDL_PATH=/usr/local/bin/ghdl     # macOS / Linux
+set GHDL_PATH=D:\ghdl\bin\ghdl.exe        # Windows (PowerShell)
 ```
 
-### Development Setup
+**`architecture "sim" of "…" is obsoleted by entity "…"`**
+A stale GHDL work library (`.cf` files) from a previous run is conflicting with the current
+sources. `chronam --run-sim` cleans the work library automatically; if you run GHDL manually,
+delete `work-obj*.cf` in the working directory and re-analyze.
 
-```bash
-# Clone the repository
-git clone https://github.com/Nciibi/chronam.git
-cd chronam
+**`unit "demo" not found in library "work"`**
+The design under test was analyzed *after* the testbench that instantiates it. Chronam orders
+sources so the DUT is analyzed first; when invoking GHDL directly, analyze the DUT file before
+the testbench.
 
-# Install JS dependencies (requires pnpm)
-pnpm install
+**A signal shows only an orange dashed line (or nothing)**
+That signal is `U`/`X`/`Z` for the entire simulation — it was never driven. Add stimulus in the
+testbench, or implement the output in the design under test. The viewer is showing the truthful
+state of the VCD; there is no waveform data to draw.
 
-# Build all monorepo packages
-pnpm build
+**The viewer feels slow on large VCDs**
+VCD lookup is `O(log n)` per cell via a binary search over pre-sorted transitions, so it scales to
+large captures. FPS is shown live in the status bar; if it is low, the terminal itself may be the
+bottleneck (a very large window width on a slow terminal).
 
-# Build the Rust CLI separately
-cargo build --manifest-path packages/cli/Cargo.toml
-
-# Open the extension in VS Code
-code .
-```
-
-*Press `F5` in VS Code to launch the Extension Development Host.*
-
-## 📖 Usage Workflow
-
-### VS Code
-
-1. Open any `.vhd` or `.vhdl` file in VS Code.
-2. Click **▶ Run Simulation** (injected as CodeLens above entities).
-3. No testbench? Click **📝 Generate Testbench** to scaffold one.
-4. View waveforms in the built-in **Chronam Wave Viewer**.
-
-### CLI (Terminal)
-
-1. Run `chronam my_design.vhdl` to auto-generate a testbench under `my_design_sim/`.
-2. Edit `my_design_sim/testbench_my_design.vhdl` to add your stimulus.
-3. Run `chronam --run-sim my_design_sim/testbench_my_design.vhdl` — GHDL compiles, simulates, and opens the interactive terminal wave viewer with real VCD data.
-4. In the viewer: `Space` to pause/resume, `↑/↓` to select signals, `+/-` for speed, `z/x` for zoom, `q`/`Ctrl+C` to quit.
-5. For CI/CD, use `chronam build && chronam test` in your pipeline.
+---
 
 ## 🏗️ Architecture
 
@@ -184,6 +223,8 @@ graph TD
 | `packages/shared-types` | TS | IPC protocol interfaces |
 | `packages/cli` | Rust | Standalone VHDL development CLI |
 
+---
+
 ## 🗺️ Roadmap
 
 | Phase | Milestone | Status |
@@ -194,25 +235,45 @@ graph TD
 | **v0.4** | FSM visualization, timing violation cursors | ⚪ Planned |
 | **v0.5** | AI-assisted debugging, ModelSim/Verilator adapters | ⚪ Future |
 
+---
+
 ## 🤝 Contributing
 
-We welcome contributions of all kinds — whether it's a bug report, a feature request, or a pull request.
-
-### Quick Start for Contributors
+We welcome contributions of all kinds — bug reports, feature requests, or pull requests.
 
 1. Fork the repository.
-2. Set up the development environment (see [Getting Started](#development-setup)).
+2. Set up the development environment (see below).
 3. Pick an issue from the [tracker](https://github.com/Nciibi/chronam/issues).
-4. Follow the [contribution guidelines](CONTRIBUTING.md).
+4. Follow [CONTRIBUTING.md](CONTRIBUTING.md).
 5. Submit a pull request.
 
-### What We Need Help With
+### Development Setup
 
-- **Rust CLI** — New commands, GHDL edge cases, cross-platform testing.
+```bash
+git clone https://github.com/Nciibi/chronam.git
+cd chronam
+
+# Install JS dependencies (requires pnpm)
+pnpm install
+
+# Build all monorepo packages
+pnpm build
+
+# Build the Rust CLI
+cargo build --manifest-path packages/cli/Cargo.toml
+
+# Open the extension in VS Code (press F5 for the Extension Development Host)
+code .
+```
+
+### What We Need Help With
+- **Rust CLI** — new commands, GHDL edge cases, cross-platform testing.
 - **Waveform Viewer** — UI polish, performance, signal grouping, radix display.
-- **VHDL Parser** — Support for more VHDL-2008 constructs.
-- **Documentation** — Tutorials, API docs, example projects.
-- **Testing** — Integration tests for the simulation pipeline.
+- **VHDL Parser** — support for more VHDL-2008 constructs.
+- **Documentation** — tutorials, API docs, example projects.
+- **Testing** — integration tests for the simulation pipeline.
+
+---
 
 ## 📄 License
 
