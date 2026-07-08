@@ -12,10 +12,12 @@ pub enum SignalState {
 #[derive(Debug, Clone)]
 pub struct SignalInfo {
     pub name: String,
-    #[allow(dead_code)]
     pub path: String,
     pub signal_type: String,
-    #[allow(dead_code)]
+    pub driver: String,
+    pub period_ns: f64,
+    pub frequency_mhz: f64,
+    pub duty_cycle: f64,
     pub width: u32,
 }
 
@@ -71,6 +73,10 @@ impl WaveSource for VcdSource {
             name: sig.name.rsplit('.').next().unwrap_or(&sig.name).to_string(),
             path: sig.name.clone(),
             signal_type: if sig.width == 1 { "std_logic".into() } else { format!("std_logic_vector[{}:0]", sig.width - 1) },
+            driver: String::new(),
+            period_ns: 0.0,
+            frequency_mhz: 0.0,
+            duty_cycle: 0.0,
             width: sig.width,
         }
     }
@@ -117,5 +123,93 @@ impl WaveSource for VcdSource {
         changes.iter()
             .filter(|(t, _)| *t >= start_fs && *t <= end_fs)
             .count() as u64
+    }
+}
+
+pub struct MockSource {
+    signals: Vec<SignalInfo>,
+}
+
+impl MockSource {
+    pub fn new() -> Self {
+        let signals = vec![
+            SignalInfo {
+                name: "clk".into(), path: "top.clk".into(), signal_type: "std_logic".into(),
+                driver: "clock_generator".into(), period_ns: 20.0, frequency_mhz: 50.0, duty_cycle: 50.0, width: 1,
+            },
+            SignalInfo {
+                name: "reset".into(), path: "top.reset".into(), signal_type: "std_logic".into(),
+                driver: "sys_ctrl".into(), period_ns: 0.0, frequency_mhz: 0.0, duty_cycle: 0.0, width: 1,
+            },
+            SignalInfo {
+                name: "enable".into(), path: "top.enable".into(), signal_type: "std_logic".into(),
+                driver: "sys_ctrl".into(), period_ns: 0.0, frequency_mhz: 0.0, duty_cycle: 0.0, width: 1,
+            },
+            SignalInfo {
+                name: "data[7:0]".into(), path: "top.data".into(), signal_type: "std_logic_vector".into(),
+                driver: "data_drv".into(), period_ns: 0.0, frequency_mhz: 0.0, duty_cycle: 0.0, width: 8,
+            },
+        ];
+        Self { signals }
+    }
+}
+
+impl WaveSource for MockSource {
+    fn signal_count(&self) -> usize { self.signals.len() }
+
+    fn signal_info(&self, idx: usize) -> SignalInfo { self.signals[idx].clone() }
+
+    fn get_state(&self, idx: usize, time_ns: f64) -> SignalState {
+        match idx {
+            0 => {
+                if (time_ns % 20.0) < 10.0 { SignalState::High } else { SignalState::Low }
+            }
+            1 => {
+                if time_ns < 150.0 { SignalState::High } else { SignalState::Low }
+            }
+            2 => {
+                if time_ns > 200.0 && (time_ns % 400.0) < 200.0 { SignalState::High } else { SignalState::Low }
+            }
+            3 => {
+                let val = ((time_ns / 50.0).floor() as u8) & 0xFF;
+                SignalState::Bus(format!("{:08b}", val))
+            }
+            _ => SignalState::Unknown,
+        }
+    }
+
+    fn get_transitions(&self, idx: usize, start_ns: f64, end_ns: f64) -> Vec<f64> {
+        let mut trans = Vec::new();
+        match idx {
+            0 => {
+                let mut t = (start_ns / 10.0).ceil() * 10.0;
+                while t <= end_ns {
+                    if t >= start_ns { trans.push(t); }
+                    t += 10.0;
+                }
+            }
+            1 => if start_ns <= 150.0 && end_ns >= 150.0 { trans.push(150.0); },
+            2 => {
+                let mut t = (start_ns / 200.0).ceil() * 200.0;
+                if t == 0.0 { t = 200.0; }
+                while t <= end_ns {
+                    if t >= start_ns && t >= 200.0 { trans.push(t); }
+                    t += 200.0;
+                }
+            }
+            3 => {
+                let mut t = (start_ns / 50.0).ceil() * 50.0;
+                while t <= end_ns {
+                    if t >= start_ns { trans.push(t); }
+                    t += 50.0;
+                }
+            }
+            _ => {}
+        }
+        trans
+    }
+
+    fn count_transitions(&self, idx: usize, start_ns: f64, end_ns: f64) -> u64 {
+        self.get_transitions(idx, start_ns, end_ns).len() as u64
     }
 }
