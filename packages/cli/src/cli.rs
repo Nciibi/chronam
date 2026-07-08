@@ -71,47 +71,6 @@ pub enum Commands {
     Info(crate::commands::info::InfoArgs),
 }
 
-#[derive(Debug, Subcommand)]
-pub enum Commands {
-    #[command(aliases = &["n", "create"])]
-    New(crate::commands::new::NewArgs),
-
-    #[command(aliases = &["b", "make"])]
-    Build(crate::commands::build::BuildArgs),
-
-    #[command(aliases = &["sim", "run"])]
-    Simulate(crate::commands::simulate::SimulateArgs),
-
-    #[command(aliases = &["l", "check"])]
-    Lint(crate::commands::lint::LintArgs),
-
-    #[command(aliases = &["c", "cl"])]
-    Clean(crate::commands::clean::CleanArgs),
-
-    #[command(aliases = &["diag", "checkup"])]
-    Doctor(crate::commands::doctor::DoctorArgs),
-
-    #[command(aliases = &["comp"])]
-    Compile(crate::commands::compile::CompileArgs),
-
-    #[command(aliases = &["w", "monitor"])]
-    Watch(crate::commands::watch::WatchArgs),
-
-    #[command(aliases = &["t", "testv"])]
-    Test(crate::commands::test::TestArgs),
-
-    #[command(aliases = &["completions"])]
-    Completion(crate::commands::completion::CompletionArgs),
-
-    #[command(aliases = &["vw", "view"])]
-    Wave(crate::commands::wave::WaveArgs),
-
-    Info(crate::commands::info::InfoArgs),
-
-    #[command(aliases = &["h", "?"])]
-    Help(HelpArgs),
-}
-
 impl Cli {
     pub fn run(&self) -> Result<()> {
         use crate::commands::*;
