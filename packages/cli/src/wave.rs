@@ -152,9 +152,30 @@ impl MockSource {
                 name: "data[7:0]".into(), path: "top.data".into(), signal_type: "std_logic_vector".into(),
                 driver: "data_drv".into(), period_ns: 0.0, frequency_mhz: 0.0, duty_cycle: 0.0, width: 8,
             },
+            SignalInfo {
+                name: "ecg".into(), path: "top.ecg".into(), signal_type: "analog".into(),
+                driver: "heart".into(), period_ns: 833.33, frequency_mhz: 0.0, duty_cycle: 0.0, width: 1,
+            },
         ];
         Self { signals }
     }
+}
+
+/// Generate a normalized ECG (PQRST) waveform value in [-1.0, 1.0]
+/// for a given time in nanoseconds. One cardiac cycle every `beat_ns`.
+fn ecg_value(time_ns: f64, beat_ns: f64) -> f64 {
+    let phase = (time_ns % beat_ns) / beat_ns; // 0..1
+    let gauss = |center: f64, width: f64, amp: f64| {
+        let d = phase - center;
+        amp * (-(d * d) / (2.0 * width * width)).exp()
+    };
+    // P wave (small bump), QRS complex (sharp), T wave (medium bump)
+    let p = gauss(0.18, 0.022, 0.18);
+    let q = gauss(0.30, 0.008, -0.12);
+    let r = gauss(0.33, 0.0085, 1.0);
+    let s = gauss(0.36, 0.010, -0.28);
+    let t = gauss(0.58, 0.040, 0.32);
+    (p + q + r + s + t).clamp(-1.0, 1.0)
 }
 
 impl WaveSource for MockSource {
@@ -177,6 +198,7 @@ impl WaveSource for MockSource {
                 let val = ((time_ns / 50.0).floor() as u8) & 0xFF;
                 SignalState::Bus(format!("{:08b}", val))
             }
+            4 => SignalState::Analog(ecg_value(time_ns, self.signals[4].period_ns)),
             _ => SignalState::Unknown,
         }
     }
