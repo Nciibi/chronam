@@ -7,11 +7,14 @@ pub struct Theme {
     pub background: Color,
     pub trace: Color,
     pub trace_glow: Color,
+    #[allow(dead_code)]
     pub grid_fine: Color,
+    #[allow(dead_code)]
     pub grid_major: Color,
     pub sweep: Color,
     pub head: Color,
     pub alert: Color,
+    #[allow(dead_code)]
     pub warn: Color,
     pub cyan: Color,
     pub text: Color,
