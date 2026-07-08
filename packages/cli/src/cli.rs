@@ -102,6 +102,11 @@ impl Cli {
                 Commands::Completion(args) => completion::run(args, self),
                 Commands::Wave(args) => wave::run(args, self),
                 Commands::Info(args) => info::run(args, self),
+                Commands::Help(_) => {
+                    <Cli as CommandFactory>::command().print_help()?;
+                    println!();
+                    Ok(())
+                }
             },
             None => {
                 <Cli as CommandFactory>::command().print_help()?;
