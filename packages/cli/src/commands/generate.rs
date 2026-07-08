@@ -226,12 +226,12 @@ fn generate_testbench(entity: &str, ports: &[Port]) -> String {
 
     if has_clk {
         tb.push_str("  -- Clock generator\n");
-        tb.push_str("  clk_process : process\n");
+        tb.push_str(&format!("  {}_process : process\n", clk_name));
         tb.push_str("  begin\n");
         tb.push_str("    while true loop\n");
-        tb.push_str("      clk <= '0';\n");
+        tb.push_str(&format!("      {} <= '0';\n", clk_name));
         tb.push_str("      wait for CLK_PERIOD / 2;\n");
-        tb.push_str("      clk <= '1';\n");
+        tb.push_str(&format!("      {} <= '1';\n", clk_name));
         tb.push_str("      wait for CLK_PERIOD / 2;\n");
         tb.push_str("    end loop;\n");
         tb.push_str("  end process;\n");
@@ -240,11 +240,11 @@ fn generate_testbench(entity: &str, ports: &[Port]) -> String {
 
     if has_rst {
         tb.push_str("  -- Reset stimulus\n");
-        tb.push_str("  reset_process : process\n");
+        tb.push_str(&format!("  {}_process : process\n", rst_name));
         tb.push_str("  begin\n");
-        tb.push_str("    reset <= '1';\n");
+        tb.push_str(&format!("    {} <= '1';\n", rst_name));
         tb.push_str("    wait for 100 ns;\n");
-        tb.push_str("    reset <= '0';\n");
+        tb.push_str(&format!("    {} <= '0';\n", rst_name));
         tb.push_str("    wait;\n");
         tb.push_str("  end process;\n");
         tb.push('\n');
