@@ -28,7 +28,7 @@ impl App {
             timeline: Timeline::new(total_time_ns),
             theme: Theme::new(),
             selected_signal: 0,
-            paused: true,
+            paused: false,
             should_quit: false,
             fps: 0.0,
             show_help: false,

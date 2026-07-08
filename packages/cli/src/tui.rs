@@ -142,7 +142,7 @@ fn draw_signal_list(f: &mut Frame, app: &mut App, area: Rect) {
                     .fg(app.theme.selected)
                     .add_modifier(Modifier::BOLD)
             } else {
-                Style::default().fg(app.theme.signal_color(i))
+                Style::default().fg(app.theme.get_signal_color(i))
             };
             ListItem::new(Line::from(vec![Span::styled(
                 format!(" {}", info.name),
@@ -174,7 +174,7 @@ fn draw_waveform_area(f: &mut Frame, app: &App, area: Rect) {
     let mut lines: Vec<Line> = Vec::with_capacity(sig_count);
 
     for i in 0..sig_count {
-        let color = app.theme.signal_color(i);
+        let color = app.theme.get_signal_color(i);
         let mut row: Vec<char> = vec![' '; width.max(1)];
 
         let transitions = app.source.get_transitions(i, left_edge_time, right_edge);
