@@ -85,7 +85,7 @@ impl Cli {
         }
 
         // Mode 3: subcommand
-        match &self.command {
+        return match &self.command {
             Some(cmd) => match cmd {
                 Commands::New(args) => new::run(args, self),
                 Commands::Build(args) => build::run(args, self),
@@ -105,8 +105,7 @@ impl Cli {
                 println!();
                 Ok(())
             }
-        }
-        Ok(())
+        };
     }
 }
 
