@@ -3,10 +3,11 @@ pub mod clean;
 pub mod compile;
 pub mod completion;
 pub mod doctor;
-
+pub mod gen;
 pub mod info;
 pub mod lint;
 pub mod new;
+pub mod run_sim;
 pub mod simulate;
 pub mod test;
 pub mod watch;
