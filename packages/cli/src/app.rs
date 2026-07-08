@@ -118,3 +118,41 @@ impl App {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tui::draw;
+    use crate::vcd::parse;
+    use ratatui::backend::TestBackend;
+
+    #[test]
+    fn debug_render_vcd() {
+        let data = parse(std::path::Path::new(
+            "D:/projects/chronam/tests/demo_sim/testbench_demo.vcd",
+        ))
+        .unwrap();
+        let total_time_fs = data.changes.last().map(|c| c.time).unwrap_or(1_000_000_000_000).max(1);
+        let total_time_ns = total_time_fs as f64 / 1_000_000.0;
+        let source = crate::wave::VcdSource::new(data.clone());
+        let mut app = App::new(Box::new(source), total_time_ns);
+        for t in [0.0, 1000.0, 3543.0, 50000.0] {
+            app.timeline.current_time_ns = t;
+            let backend = TestBackend::new(200, 50);
+            let mut terminal = ratatui::Terminal::new(backend).unwrap();
+            terminal.draw(|f| draw(f, &mut app)).unwrap();
+            let buf = terminal.backend().buffer().clone();
+            println!("===== current_time_ns = {} =====", t);
+            for y in 0..buf.area.height {
+                let mut line = String::new();
+                for x in 0..buf.area.width {
+                    line.push(buf[(x, y)].symbol().chars().next().unwrap_or(' '));
+                }
+                println!("{}", line);
+            }
+            for i in 0..app.source.signal_count() {
+                println!("  sig{} @{}ns = {:?}", i, t, app.source.get_state(i, t));
+            }
+        }
+    }
+}
