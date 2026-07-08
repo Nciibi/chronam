@@ -160,6 +160,17 @@ fn parse_port_line(line: &str) -> Option<Port> {
 }
 
 fn generate_testbench(entity: &str, ports: &[Port]) -> String {
+    let clk_name = ports.iter()
+        .find(|p| p.name.to_lowercase().contains("clk"))
+        .map(|p| p.name.as_str())
+        .unwrap_or("clk");
+    let rst_name = ports.iter()
+        .find(|p| {
+            let n = p.name.to_lowercase();
+            n.contains("rst") || n.contains("reset")
+        })
+        .map(|p| p.name.as_str())
+        .unwrap_or("reset");
     let has_clk = ports.iter().any(|p| p.name.to_lowercase().contains("clk"));
     let has_rst = ports.iter().any(|p| {
         let n = p.name.to_lowercase();
