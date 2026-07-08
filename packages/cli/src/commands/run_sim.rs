@@ -34,15 +34,19 @@ pub fn run(tb_path: &str, _cli: &Cli) -> Result<()> {
     let abs_work = std::path::absolute(work_dir)
         .unwrap_or_else(|_| work_dir.to_path_buf());
 
-    // Gather VHDL source files in the same directory (non-recursive)
+    // Gather VHDL sources: testbench directory + its parent (for the original design files)
     let mut sources: Vec<std::path::PathBuf> = Vec::new();
-    if let Ok(entries) = fs::read_dir(work_dir) {
-        for entry in entries.flatten() {
-            let p = entry.path();
-            if p.is_file() {
-                let ext = p.extension().and_then(|e| e.to_str()).unwrap_or("");
-                if ext == "vhd" || ext == "vhdl" {
-                    sources.push(p);
+    for dir in [work_dir, work_dir.parent().unwrap_or(Path::new("."))] {
+        if let Ok(entries) = fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let p = entry.path();
+                if p.is_file() {
+                    let ext = p.extension().and_then(|e| e.to_str()).unwrap_or("");
+                    if ext == "vhd" || ext == "vhdl" {
+                        if !sources.contains(&p) {
+                            sources.push(p);
+                        }
+                    }
                 }
             }
         }
@@ -50,7 +54,7 @@ pub fn run(tb_path: &str, _cli: &Cli) -> Result<()> {
     sources.sort();
 
     if sources.is_empty() {
-        error_(&format!("No .vhd/.vhdl files found in {}", work_dir.display()));
+        error_(&format!("No .vhd/.vhdl files found in {} or its parent", work_dir.display()));
         return Ok(());
     }
 
