@@ -155,7 +155,6 @@ fn generate_testbench(entity: &str, ports: &[Port]) -> String {
 
     tb.push_str(&format!("architecture sim of testbench_{} is\n", entity.to_lowercase()));
 
-    let entity_lower = entity.to_lowercase();
     tb.push('\n');
     tb.push_str(&format!("  component {} is\n", entity));
     if ports.is_empty() {
