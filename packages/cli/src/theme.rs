@@ -11,7 +11,9 @@ pub struct Theme {
     pub status: Color,
     pub paused: Color,
     pub text: Color,
+    #[allow(dead_code)]
     pub grid_major: Color,
+    #[allow(dead_code)]
     pub grid_minor: Color,
 }
 

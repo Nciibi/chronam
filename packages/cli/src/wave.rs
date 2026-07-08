@@ -12,8 +12,10 @@ pub enum SignalState {
 #[derive(Debug, Clone)]
 pub struct SignalInfo {
     pub name: String,
+    #[allow(dead_code)]
     pub path: String,
     pub signal_type: String,
+    #[allow(dead_code)]
     pub width: u32,
 }
 

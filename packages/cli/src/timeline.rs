@@ -33,6 +33,7 @@ impl Timeline {
         ((time - left_edge) / self.ns_per_char).max(-1.0).min(width as f64 + 1.0)
     }
 
+    #[allow(dead_code)]
     pub fn x_to_time(&self, x: u16, width: u16) -> f64 {
         let right_edge = self.current_time_ns;
         let left_edge = right_edge - (width as f64 * self.ns_per_char);
