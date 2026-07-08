@@ -68,6 +68,9 @@ pub enum Commands {
     Wave(crate::commands::wave::WaveArgs),
 
     Info(crate::commands::info::InfoArgs),
+
+    #[command(aliases = &["h", "?"])]
+    Help(crate::commands::info::InfoArgs),
 }
 
 impl Cli {
