@@ -77,9 +77,12 @@ mod tests {
         tl.zoom_in();
         assert!((tl.ns_per_char - 10.0 / 1.2).abs() < 0.001);
 
+        let after_in = tl.ns_per_char;
         tl.zoom_out();
+        assert!((tl.ns_per_char - after_in * 1.2).abs() < 0.001);
+
         tl.zoom_out();
-        assert!((tl.ns_per_char - 10.0).abs() < 0.001);
+        assert!((tl.ns_per_char - 10.0 * 1.2).abs() < 0.001);
     }
 
     #[test]
