@@ -298,7 +298,7 @@ fn draw_digital_trace(
     let mut current_x = 0.0;
 
     for t in transitions {
-        let x_f = app.timeline.time_to_x(t, app.timeline_ns_width(width)).max(0.0).min(width as f64);
+        let x_f = app.timeline.time_to_x(t, width as u16).max(0.0).min(width as f64);
         let x_int = x_f.floor() as usize;
 
         paint_segment(grid, colors, row_off, current_x as usize, x_int.min(width), &current_state, color);
