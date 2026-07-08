@@ -13,7 +13,7 @@ use ratatui::Terminal;
 
 use crate::app::App;
 use crate::vcd::VcdData;
-use crate::wave::{SignalState, VcdSource, WaveSource};
+use crate::wave::{SignalState, VcdSource};
 
 pub fn run_interactive(data: &VcdData) -> io::Result<()> {
     enable_raw_mode()?;
@@ -108,8 +108,8 @@ fn draw_status_bar(f: &mut Frame, app: &App, area: Rect) {
     ];
 
     let mut spans: Vec<Span> = vec![Span::raw(" ")];
-    for item in items.iter() {
-        spans.push(Span::styled(*item, Style::default().fg(app.theme.status)));
+    for item in &items {
+        spans.push(Span::styled(item.clone(), Style::default().fg(app.theme.status)));
         spans.push(Span::raw(" │ "));
     }
     spans.push(Span::styled(
