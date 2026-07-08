@@ -287,6 +287,12 @@ fn draw_info_panel(f: &mut Frame, app: &App, area: Rect) {
         SignalState::HighImpedance => "HIGH-Z".into(),
     };
 
+    let freq_str = if info.frequency_mhz > 0.0 {
+        format!("{:.2} MHz", info.frequency_mhz)
+    } else {
+        "—".to_string()
+    };
+
     let time_str = format!("{:.3} us", app.timeline.current_time_ns / 1000.0);
     let cursor_str = format!("{:.1} ns", app.timeline.cursor_time_ns);
     let speed_str = format!("{:.1}x", app.timeline.speed);
@@ -294,7 +300,7 @@ fn draw_info_panel(f: &mut Frame, app: &App, area: Rect) {
 
     let text = vec![
         Line::from(vec![
-            Span::styled(" Signal  : ", Style::default().fg(app.theme.text)),
+            Span::styled(" Selected Signal : ", Style::default().fg(app.theme.text)),
             Span::styled(
                 info.name.clone(),
                 Style::default()
@@ -303,33 +309,25 @@ fn draw_info_panel(f: &mut Frame, app: &App, area: Rect) {
             ),
         ]),
         Line::from(vec![
-            Span::styled(" Type    : ", Style::default().fg(app.theme.text)),
+            Span::styled(" Type            : ", Style::default().fg(app.theme.text)),
             Span::styled(info.signal_type.clone(), Style::default().fg(app.theme.data)),
         ]),
         Line::from(vec![
-            Span::styled(" Value   : ", Style::default().fg(app.theme.text)),
+            Span::styled(" Current Value   : ", Style::default().fg(app.theme.text)),
             Span::styled(val_str, Style::default().fg(app.theme.clock)),
         ]),
         Line::from(vec![
-            Span::styled(" Time    : ", Style::default().fg(app.theme.text)),
-            Span::styled(cursor_str, Style::default().fg(app.theme.status)),
-            Span::styled("  (sim ", Style::default().fg(app.theme.text)),
-            Span::styled(time_str, Style::default().fg(app.theme.status)),
-            Span::styled(")", Style::default().fg(app.theme.text)),
+            Span::styled(" Transitions     : ", Style::default().fg(app.theme.text)),
+            Span::styled(trans_count.to_string(), Style::default().fg(app.theme.status)),
         ]),
         Line::from(vec![
-            Span::styled(" Speed   : ", Style::default().fg(app.theme.text)),
-            Span::styled(speed_str, Style::default().fg(app.theme.enable)),
-            Span::styled("  Zoom: ", Style::default().fg(app.theme.text)),
-            Span::styled(zoom_str, Style::default().fg(app.theme.enable)),
+            Span::styled(" Frequency       : ", Style::default().fg(app.theme.text)),
+            Span::styled(freq_str, Style::default().fg(app.theme.enable)),
         ]),
         Line::from(vec![
             Span::styled(
-                format!(" Transitions: {}", trans_count),
-                Style::default().fg(app.theme.status),
-            ),
-            Span::styled(
-                format!("  │ FPS: {:.0}", app.fps),
+                format!(" Sim: {}  Cursor: {}  Speed: {}  Zoom: {}  FPS: {:.0}",
+                    time_str, cursor_str, speed_str, zoom_str, app.fps),
                 Style::default().fg(app.theme.status),
             ),
         ]),

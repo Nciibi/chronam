@@ -35,7 +35,7 @@ impl Theme {
         }
     }
 
-    pub fn signal_color(&self, idx: usize) -> Color {
+    pub fn get_signal_color(&self, idx: usize) -> Color {
         match idx % 8 {
             0 => self.clock,
             1 => self.reset,
