@@ -32,13 +32,30 @@ Write VHDL, press Run, and analyze the waveforms natively in VS Code — or run 
 
 ### CLI (`chronam`)
 
-A professional Rust CLI for headless build automation, CI/CD, and advanced users:
+A professional Rust CLI for headless build automation, CI/CD, simulation, and interactive waveform viewing:
 
-| Command | Description |
+#### Quick Workflow
+
+```bash
+# Generate a testbench from your VHDL design
+chronam counter.vhdl
+
+# Edit the generated testbench (counter_sim/testbench_counter.vhdl),
+# then run simulation + TUI wave viewer:
+chronam --run-sim counter_sim/testbench_counter.vhdl
+```
+
+#### Commands
+
+| Command / Flag | Description |
 |---------|-------------|
+| `chronam <file>.vhdl` | Generate a testbench skeleton in `<entity>_sim/` |
+| `chronam --run-sim <testbench>` | Run GHDL simulation then launch TUI wave viewer |
+| `chronam wave [VCD_PATH]` | Open a VCD file in the TUI viewer |
+| `chronam wave --mock` | Launch built-in hospital heart-monitor demo |
+| `chronam simulate <entity>` | Run simulation and export waveforms |
 | `chronam new`    | Scaffold a new VHDL project |
 | `chronam build`  | Compile and elaborate all sources |
-| `chronam simulate` | Run simulation and export waveforms |
 | `chronam test`   | Auto-discover and run testbenches |
 | `chronam lint`   | Syntax-check all source files |
 | `chronam compile` | Compile individual files |
@@ -47,6 +64,22 @@ A professional Rust CLI for headless build automation, CI/CD, and advanced users
 | `chronam watch`  | Rebuild on file changes |
 | `chronam info`   | Show project metadata |
 | `chronam completion` | Generate shell completions |
+
+#### TUI Wave Viewer Controls
+
+| Key | Action |
+|-----|--------|
+| `Space` | Pause / resume simulation |
+| `↑` / `↓` | Select signal |
+| `+` / `-` | Increase / decrease speed |
+| `z` / `x` | Zoom in / out |
+| `←` / `→` | Move cursor |
+| `h` | Toggle help |
+| `q` / `Esc` / `Ctrl+C` | Quit |
+
+The viewer renders all signals as continuous thin-line traces (medical monitor style)
+with a persistent bottom command bar. Real VCD data from GHDL is displayed via
+`VcdSource` — no synthetic data, no block characters.
 
 All commands feature colored output, rich tables, progress bars, and actionable error messages.
 
