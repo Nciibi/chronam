@@ -48,11 +48,11 @@ begin
   end process;
 
   -- Reset stimulus
-  reset_process : process
+  rst_process : process
   begin
-    reset <= '1';
+    rst <= '1';
     wait for 100 ns;
-    reset <= '0';
+    rst <= '0';
     wait;
   end process;
 
