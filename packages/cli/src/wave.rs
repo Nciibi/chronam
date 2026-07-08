@@ -65,13 +65,27 @@ impl VcdSource {
     }
 
     fn get_value_at(&self, changes: &[(u64, String)], time_fs: u64) -> Option<String> {
-        let mut val = None;
-        for (ct, cv) in changes {
-            if *ct <= time_fs {
-                val = Some(cv.clone());
+        // `changes` is sorted by time (see `new`). Find the last entry with
+        // ct <= time_fs via binary search instead of a linear scan, otherwise
+        // rendering is O(n) per cell and crawls on large VCDs.
+        if changes.is_empty() || changes[0].0 > time_fs {
+            return None;
+        }
+        let mut lo = 0usize;
+        let mut hi = changes.len();
+        while lo < hi {
+            let mid = (lo + hi) / 2;
+            if changes[mid].0 <= time_fs {
+                lo = mid + 1;
+            } else {
+                hi = mid;
             }
         }
-        val
+        if lo == 0 {
+            None
+        } else {
+            Some(changes[lo - 1].1.clone())
+        }
     }
 }
 
