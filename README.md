@@ -102,6 +102,14 @@ git clone https://github.com/Nciibi/chronam.git
 cd chronam/packages/cli
 cargo build --release
 ./target/release/chronam --help
+
+# Quick start — generate testbench, then simulate with live waveforms:
+chronam my_design.vhdl
+#  → creates my_design_sim/testbench_my_design.vhdl
+#  → edit to add stimulus, then:
+chronam --run-sim my_design_sim/testbench_my_design.vhdl
+#  → analyzes, elaborates, runs GHDL simulation
+#  → launches interactive terminal wave viewer
 ```
 
 ### Development Setup
