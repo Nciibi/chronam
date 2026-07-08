@@ -136,11 +136,20 @@ code .
 
 ## 📖 Usage Workflow
 
+### VS Code
+
 1. Open any `.vhd` or `.vhdl` file in VS Code.
 2. Click **▶ Run Simulation** (injected as CodeLens above entities).
 3. No testbench? Click **📝 Generate Testbench** to scaffold one.
 4. View waveforms in the built-in **Chronam Wave Viewer**.
-5. For CI/CD, run `chronam build && chronam test` in your pipeline.
+
+### CLI (Terminal)
+
+1. Run `chronam my_design.vhdl` to auto-generate a testbench under `my_design_sim/`.
+2. Edit `my_design_sim/testbench_my_design.vhdl` to add your stimulus.
+3. Run `chronam --run-sim my_design_sim/testbench_my_design.vhdl` — GHDL compiles, simulates, and opens the interactive terminal wave viewer with real VCD data.
+4. In the viewer: `Space` to pause/resume, `↑/↓` to select signals, `+/-` for speed, `z/x` for zoom, `q`/`Ctrl+C` to quit.
+5. For CI/CD, use `chronam build && chronam test` in your pipeline.
 
 ## 🏗️ Architecture
 
