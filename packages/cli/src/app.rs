@@ -38,8 +38,7 @@ impl App {
 
     pub fn run<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> Result<()> {
         let mut last_tick = Instant::now();
-        let mut frame_count = 0;
-        let mut fps_timer = Instant::now();
+        let mut fps_ema = 0.0;
 
         loop {
             if self.should_quit {
@@ -70,11 +69,16 @@ impl App {
 
             terminal.draw(|f| crate::tui::draw(f, self))?;
 
-            frame_count += 1;
-            if fps_timer.elapsed() >= Duration::from_secs(1) {
-                self.fps = frame_count as f64 / fps_timer.elapsed().as_secs_f64();
-                frame_count = 0;
-                fps_timer = Instant::now();
+            // Smooth, live FPS estimate via an exponential moving average so
+            // the readout never gets stuck on its initial 0.0 value.
+            if delta > 0.0 {
+                let instant = 1.0 / delta;
+                fps_ema = if fps_ema == 0.0 {
+                    instant
+                } else {
+                    fps_ema * 0.9 + instant * 0.1
+                };
+                self.fps = fps_ema;
             }
         }
     }
