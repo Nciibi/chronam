@@ -395,7 +395,6 @@ fn draw_head(
     h: usize,
     width: usize,
     i: usize,
-    color: Color,
     app: &App,
     left_edge_time: f64,
 ) {
