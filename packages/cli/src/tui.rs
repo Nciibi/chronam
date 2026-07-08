@@ -39,6 +39,31 @@ pub fn run_interactive(data: &VcdData) -> io::Result<()> {
     result.map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))
 }
 
+/// Launch the built-in hospital heart-monitor demo with a synthetic source.
+pub fn run_mock(source: crate::wave::MockSource) -> io::Result<()> {
+    enable_raw_mode()?;
+    let mut stdout = io::stdout();
+    stdout.execute(EnterAlternateScreen)?;
+    stdout.execute(EnableMouseCapture)?;
+
+    let backend = ratatui::backend::CrosstermBackend::new(stdout);
+    let mut terminal = Terminal::new(backend)?;
+
+    // Give the demo a long, looping timeline so the trace scrolls forever.
+    let total_time_ns = 100_000.0;
+    let mut app = App::new(Box::new(source), total_time_ns);
+    app.paused = false;
+    app.selected_signal = 4; // start on the ECG channel
+
+    let result = app.run(&mut terminal);
+
+    disable_raw_mode()?;
+    io::stdout().execute(LeaveAlternateScreen)?;
+    io::stdout().execute(DisableMouseCapture)?;
+
+    result.map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))
+}
+
 pub fn draw(f: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
