@@ -124,7 +124,14 @@ impl WaveSource for VcdSource {
                         _ => SignalState::Unknown,
                     }
                 } else {
-                    SignalState::Bus(v)
+                    let has_meta = v
+                        .chars()
+                        .any(|c| matches!(c, 'U' | 'X' | 'Z' | 'W' | 'u' | 'x' | 'z' | 'w' | '-'));
+                    if has_meta {
+                        SignalState::Unknown
+                    } else {
+                        SignalState::Bus(v)
+                    }
                 }
             }
             None => SignalState::Unknown,
