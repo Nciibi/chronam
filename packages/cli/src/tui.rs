@@ -171,103 +171,275 @@ fn draw_waveform_area(f: &mut Frame, app: &App, area: Rect) {
     let left_edge_time = app.timeline.left_edge(area.width);
 
     let sig_count = app.source.signal_count();
-    let mut lines: Vec<Line> = Vec::with_capacity(sig_count);
 
-    for i in 0..sig_count {
-        let color = app.theme.get_signal_color(i);
-        let mut row: Vec<char> = vec![' '; width.max(1)];
-
-        let transitions = app.source.get_transitions(i, left_edge_time, right_edge);
-
-        let mut current_state = app.source.get_state(i, left_edge_time);
-        let mut current_x = 0.0;
-
-        for t in transitions {
-            let x_f = app.timeline.time_to_x(t, area.width).max(0.0).min(width as f64);
-            let x_int = x_f.floor() as usize;
-
-            draw_segment(&mut row, current_x as usize, x_int.min(width), &current_state);
-
-            let fraction = x_f - x_f.floor();
-            if x_int < width {
-                let next_state = app.source.get_state(i, t);
-                match (&current_state, &next_state) {
-                    (SignalState::Low, SignalState::High) => {
-                        row[x_int] = if fraction < 0.5 { '▌' } else { '▐' };
-                    }
-                    (SignalState::High, SignalState::Low) => {
-                        row[x_int] = if fraction < 0.5 { '▐' } else { '▌' };
-                    }
-                    _ => {
-                        draw_cell(&mut row, x_int, &next_state);
-                    }
-                }
+    // Each signal occupies a "band" of rows. Analog (ECG) traces get a tall
+    // band so the waveform has vertical resolution; digital signals get one.
+    let band_height: Vec<usize> = (0..sig_count)
+        .map(|i| {
+            if app.source.signal_info(i).signal_type == "analog" {
+                9
+            } else {
+                1
             }
+        })
+        .collect();
+    let total_rows = band_height.iter().sum::<usize>().max(1);
 
-            current_state = app.source.get_state(i, t);
-            current_x = x_int as f64 + 1.0;
+    // Char grid + per-cell color grid (so each trace keeps its own color
+    // while the ECG grid shows through the empty cells).
+    let mut grid: Vec<Vec<char>> = vec![vec![' '; width.max(1)]; total_rows];
+    let mut colors: Vec<Vec<Color>> =
+        vec![vec![app.theme.background; width.max(1)]; total_rows];
+
+    // 1) ECG-style graph-paper grid background.
+    for r in 0..total_rows {
+        for x in 0..width {
+            let (c, col) = grid_char(x, r, total_rows);
+            grid[r][x] = c;
+            colors[r][x] = col;
+        }
+    }
+
+    // 2) Draw each trace into its band.
+    let mut row_off = 0usize;
+    for i in 0..sig_count {
+        let h = band_height[i];
+        let color = app.theme.get_signal_color(i);
+        let is_analog = app.source.signal_info(i).signal_type == "analog";
+
+        if is_analog {
+            draw_analog_trace(
+                &mut grid,
+                &mut colors,
+                row_off,
+                h,
+                width,
+                i,
+                color,
+                app,
+                left_edge_time,
+                right_edge,
+            );
+        } else {
+            draw_digital_trace(
+                &mut grid,
+                &mut colors,
+                row_off,
+                width,
+                i,
+                color,
+                app,
+                left_edge_time,
+                right_edge,
+            );
         }
 
-        draw_segment(
-            &mut row,
-            current_x as usize,
-            width,
-            &current_state,
-        );
+        // 3) Bright "head" dot at the sweep (now) position.
+        draw_head(&mut grid, &mut colors, row_off, h, width, i, color, app, left_edge_time);
 
-        let spans: Vec<Span> = row
-            .iter()
-            .map(|c| {
-                Span::styled(
-                    c.to_string(),
-                    Style::default().fg(color).bg(app.theme.background),
-                )
-            })
-            .collect();
-
-        lines.push(Line::from(spans));
+        row_off += h;
     }
+
+    // 4) Sweep bar — the faint vertical line marking "now".
+    let sweep_x = (width as f64 - 1.0).max(0.0) as usize;
+    if sweep_x < width {
+        for r in 0..total_rows {
+            grid[r][sweep_x] = '│';
+            colors[r][sweep_x] = app.theme.sweep;
+        }
+    }
+
+    let lines: Vec<Line> = (0..total_rows)
+        .map(|r| {
+            let spans: Vec<Span> = (0..width)
+                .map(|x| {
+                    Span::styled(
+                        grid[r][x].to_string(),
+                        Style::default()
+                            .fg(colors[r][x])
+                            .bg(app.theme.background),
+                    )
+                })
+                .collect();
+            Line::from(spans)
+        })
+        .collect();
 
     let wave_widget = Paragraph::new(lines).style(Style::default().bg(app.theme.background));
     f.render_widget(wave_widget, area);
 }
 
-fn draw_segment(row: &mut [char], x_start: usize, x_end: usize, state: &SignalState) {
-    for x in x_start..x_end.min(row.len()) {
-        match state {
-            SignalState::High => row[x] = '█',
-            SignalState::Low => row[x] = '─',
-            SignalState::Unknown => row[x] = '?',
-            SignalState::HighImpedance => row[x] = 'Z',
-            SignalState::Bus(val) => {
-                if x == x_start {
-                    let chars: Vec<char> = val.chars().collect();
-                    for (j, c) in chars.iter().enumerate() {
-                        let pos = x + j;
-                        if pos >= row.len() {
-                            break;
-                        }
-                        row[pos] = *c;
-                    }
+/// Graph-paper grid cell. Major vertical lines every 20 cols, minor every 4.
+fn grid_char(x: usize, r: usize, total_rows: usize) -> (char, Color) {
+    if x % 20 == 0 {
+        ('┼', Color::Rgb(0, 70, 34))
+    } else if x % 4 == 0 {
+        ('│', Color::Rgb(0, 38, 18))
+    } else if r == total_rows / 2 {
+        ('─', Color::Rgb(0, 30, 15))
+    } else {
+        (' ', Color::Rgb(0, 38, 18))
+    }
+}
+
+fn draw_digital_trace(
+    grid: &mut [Vec<char>],
+    colors: &mut [Vec<Color>],
+    row_off: usize,
+    width: usize,
+    i: usize,
+    color: Color,
+    app: &App,
+    left_edge_time: f64,
+    right_edge: f64,
+) {
+    let transitions = app.source.get_transitions(i, left_edge_time, right_edge);
+    let mut current_state = app.source.get_state(i, left_edge_time);
+    let mut current_x = 0.0;
+
+    for t in transitions {
+        let x_f = app.timeline.time_to_x(t, app.timeline_ns_width(width)).max(0.0).min(width as f64);
+        let x_int = x_f.floor() as usize;
+
+        paint_segment(grid, colors, row_off, current_x as usize, x_int.min(width), &current_state, color);
+
+        let fraction = x_f - x_f.floor();
+        if x_int < width {
+            let next_state = app.source.get_state(i, t);
+            match (&current_state, &next_state) {
+                (SignalState::Low, SignalState::High) => {
+                    grid[row_off][x_int] = if fraction < 0.5 { '▌' } else { '▐' };
+                    colors[row_off][x_int] = color;
                 }
+                (SignalState::High, SignalState::Low) => {
+                    grid[row_off][x_int] = if fraction < 0.5 { '▐' } else { '▌' };
+                    colors[row_off][x_int] = color;
+                }
+                _ => paint_cell(grid, colors, row_off, x_int, &next_state, color),
             }
+        }
+
+        current_state = app.source.get_state(i, t);
+        current_x = x_int as f64 + 1.0;
+    }
+
+    paint_segment(grid, colors, row_off, current_x as usize, width, &current_state, color);
+}
+
+fn draw_analog_trace(
+    grid: &mut [Vec<char>],
+    colors: &mut [Vec<Color>],
+    row_off: usize,
+    h: usize,
+    width: usize,
+    i: usize,
+    color: Color,
+    app: &App,
+    left_edge_time: f64,
+    right_edge: f64,
+) {
+    let mid = row_off + h / 2;
+    let amp = (h as f64 / 2.0).max(1.0) - 0.5;
+    let mut prev_y: Option<usize> = None;
+
+    for x in 0..width {
+        let t = left_edge_time + (x as f64) * app.timeline.ns_per_char;
+        let v = match app.source.get_state(i, t) {
+            SignalState::Analog(v) => v,
+            _ => 0.0,
+        };
+        let y = (mid as f64 - v * amp).round().clamp(row_off as f64, (row_off + h - 1) as f64) as usize;
+
+        if let Some(py) = prev_y {
+            // Interpolate vertical line between samples (glow + trace).
+            let (lo, hi) = if py <= y { (py, y) } else { (y, py) };
+            for ry in lo..=hi {
+                let glow = ry == y;
+                grid[ry][x] = if glow { '█' } else { '│' };
+                colors[ry][x] = if glow { color } else { app.theme.trace_glow };
+            }
+        } else {
+            grid[y][x] = '█';
+            colors[y][x] = color;
+        }
+        prev_y = Some(y);
+    }
+    let _ = (right_edge,);
+}
+
+fn draw_head(
+    grid: &mut [Vec<char>],
+    colors: &mut [Vec<Color>],
+    row_off: usize,
+    h: usize,
+    width: usize,
+    i: usize,
+    color: Color,
+    app: &App,
+    left_edge_time: f64,
+) {
+    let x = (width as f64 - 1.0).max(0.0) as usize;
+    if x >= width {
+        return;
+    }
+    let t = left_edge_time + (x as f64) * app.timeline.ns_per_char;
+    match app.source.get_state(i, t) {
+        SignalState::Analog(v) => {
+            let mid = row_off + h / 2;
+            let amp = (h as f64 / 2.0).max(1.0) - 0.5;
+            let y = (mid as f64 - v * amp)
+                .round()
+                .clamp(row_off as f64, (row_off + h - 1) as f64) as usize;
+            grid[y][x] = '●';
+            colors[y][x] = app.theme.head;
+        }
+        st => {
+            paint_cell(grid, colors, row_off, x, &st, app.theme.head);
         }
     }
 }
 
-fn draw_cell(row: &mut [char], x: usize, state: &SignalState) {
-    if x < row.len() {
-        match state {
-            SignalState::High => row[x] = '█',
-            SignalState::Low => row[x] = '─',
-            SignalState::Unknown => row[x] = '?',
-            SignalState::HighImpedance => row[x] = 'Z',
-            SignalState::Bus(val) => {
-                let c = val.chars().next().unwrap_or('X');
-                row[x] = c;
-            }
-        }
+fn paint_segment(
+    grid: &mut [Vec<char>],
+    colors: &mut [Vec<Color>],
+    row_off: usize,
+    x_start: usize,
+    x_end: usize,
+    state: &SignalState,
+    color: Color,
+) {
+    for x in x_start..x_end.min(grid[row_off].len()) {
+        paint_cell(grid, colors, row_off, x, state, color);
     }
+}
+
+fn paint_cell(
+    grid: &mut [Vec<char>],
+    colors: &mut [Vec<Color>],
+    row_off: usize,
+    x: usize,
+    state: &SignalState,
+    color: Color,
+) {
+    if row_off >= grid.len() || x >= grid[row_off].len() {
+        return;
+    }
+    let (c, col) = match state {
+        SignalState::High => ('█', color),
+        SignalState::Low => ('─', color),
+        SignalState::Unknown => ('?', color),
+        SignalState::HighImpedance => ('Z', color),
+        SignalState::Analog(v) => {
+            let ch = if *v >= 0.0 { '▄' } else { '▀' };
+            (ch, color)
+        }
+        SignalState::Bus(val) => {
+            let c = val.chars().next().unwrap_or('X');
+            (c, color)
+        }
+    };
+    grid[row_off][x] = c;
+    colors[row_off][x] = col;
 }
 
 fn draw_info_panel(f: &mut Frame, app: &App, area: Rect) {
