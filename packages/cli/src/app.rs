@@ -49,10 +49,14 @@ impl App {
             let timeout = Duration::from_millis(16).saturating_sub(last_tick.elapsed());
 
             if event::poll(timeout)? {
-                if let Event::Key(key) = event::read()? {
-                    if key.kind == KeyEventKind::Press {
+                match event::read()? {
+                    Event::Key(key) if key.kind == KeyEventKind::Press => {
                         self.handle_key(key);
                     }
+                    Event::Resize(w, h) => {
+                        terminal.resize(ratatui::layout::Rect::new(0, 0, w, h))?;
+                    }
+                    _ => {}
                 }
             }
 
