@@ -10,6 +10,7 @@ pub enum SignalState {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct SignalInfo {
     pub name: String,
     pub path: String,
@@ -126,6 +127,7 @@ impl WaveSource for VcdSource {
     }
 }
 
+#[allow(dead_code)]
 pub struct MockSource {
     signals: Vec<SignalInfo>,
 }
