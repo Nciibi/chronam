@@ -118,38 +118,3 @@ impl App {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::tui::draw;
-    use crate::vcd::parse;
-    use ratatui::backend::TestBackend;
-
-    #[test]
-    fn debug_render_vcd() {
-        let data = parse(std::path::Path::new(
-            "D:/projects/chronam/tests/demo_sim/testbench_demo.vcd",
-        ))
-        .unwrap();
-        let total_time_fs = data.changes.last().map(|c| c.time).unwrap_or(1_000_000_000_000).max(1);
-        let total_time_ns = total_time_fs as f64 / 1_000_000.0;
-        let source = crate::wave::VcdSource::new(data);
-        let mut app = App::new(Box::new(source), total_time_ns);
-        app.timeline.current_time_ns = 3543.0;
-        let backend = TestBackend::new(160, 50);
-        let mut terminal = ratatui::Terminal::new(backend).unwrap();
-        terminal.draw(|f| draw(f, &mut app)).unwrap();
-        let buf = terminal.backend().buffer().clone();
-        for y in 0..buf.area.height {
-            let mut line = String::new();
-            for x in 0..buf.area.width {
-                line.push(buf[(x, y)].symbol().chars().next().unwrap_or(' '));
-            }
-            println!("{}", line);
-        }
-        // Sanity: clk should resolve to High/Low, not Unknown.
-        println!("clk@1ns = {:?}", app.source.get_state(0, 1.0));
-        println!("clk@20ns = {:?}", app.source.get_state(0, 20.0));
-    }
-}
