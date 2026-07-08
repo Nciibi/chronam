@@ -474,14 +474,14 @@ fn draw_info_panel(f: &mut Frame, app: &App, area: Rect) {
 }
 
 fn draw_help_bar(f: &mut Frame, app: &App, area: Rect) {
-    let text = if app.show_help {
-        " [Space] Pause  [↑↓] Select  [+/-] Speed  [z/x] Zoom  [←→] Cursor  [h] Help  [q] Quit"
+    let controls = if app.show_help {
+        " [SPACE] hold/run  [↑/↓] select  [+/-] speed  [z/x] zoom  [←/→] cursor  [q] quit "
     } else {
-        " Press [h] for help"
+        " [SPACE] hold/run   [↑/↓] select signal   [+/-] speed   [z/x] zoom   [←/→] cursor   [h] more   [q] quit "
     };
 
     let line = Line::from(vec![Span::styled(
-        format!(" {} ", text),
+        controls.to_string(),
         Style::default()
             .fg(app.theme.background)
             .bg(app.theme.text),
