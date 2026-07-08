@@ -15,9 +15,19 @@ pub struct WaveArgs {
 
     #[arg(long = "print")]
     pub print: bool,
+
+    /// Launch the built-in hospital heart-monitor demo (synthetic ECG + logic).
+    #[arg(long = "mock")]
+    pub mock: bool,
 }
 
 pub fn run(args: &WaveArgs, _cli: &Cli) -> Result<()> {
+    if args.mock {
+        let source = crate::wave::MockSource::new();
+        crate::tui::run_mock(source)?;
+        return Ok(());
+    }
+
     let path = if let Some(p) = &args.vcd_path {
         std::path::PathBuf::from(p)
     } else {
