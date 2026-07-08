@@ -115,25 +115,40 @@ pub enum Commands {
 impl Cli {
     pub fn run(&self) -> Result<()> {
         use crate::commands::*;
+
+        // Mode 1: bare file path → generate testbench
+        if let Some(ref vhdl_path) = self.file {
+            return gen::run(vhdl_path, self);
+        }
+
+        // Mode 2: --run-sim → simulate + TUI
+        if let Some(ref tb_path) = self.run_sim {
+            return run_sim::run(tb_path, self);
+        }
+
+        // Mode 3: subcommand
         match &self.command {
-            Commands::New(args) => new::run(args, self),
-            Commands::Build(args) => build::run(args, self),
-            Commands::Simulate(args) => simulate::run(args, self),
-            Commands::Lint(args) => lint::run(args, self),
-            Commands::Clean(args) => clean::run(args, self),
-            Commands::Doctor(args) => doctor::run(args, self),
-            Commands::Compile(args) => compile::run(args, self),
-            Commands::Watch(args) => watch::run(args, self),
-            Commands::Test(args) => test::run(args, self),
-            Commands::Completion(args) => completion::run(args, self),
-            Commands::Wave(args) => wave::run(args, self),
-            Commands::Info(args) => info::run(args, self),
-            Commands::Help(_) => {
+            Some(cmd) => match cmd {
+                Commands::New(args) => new::run(args, self),
+                Commands::Build(args) => build::run(args, self),
+                Commands::Simulate(args) => simulate::run(args, self),
+                Commands::Lint(args) => lint::run(args, self),
+                Commands::Clean(args) => clean::run(args, self),
+                Commands::Doctor(args) => doctor::run(args, self),
+                Commands::Compile(args) => compile::run(args, self),
+                Commands::Watch(args) => watch::run(args, self),
+                Commands::Test(args) => test::run(args, self),
+                Commands::Completion(args) => completion::run(args, self),
+                Commands::Wave(args) => wave::run(args, self),
+                Commands::Info(args) => info::run(args, self),
+            },
+            None => {
+                // No args at all — print help
                 <Cli as CommandFactory>::command().print_help()?;
                 println!();
-                Ok(())
             }
         }
+        Ok(())
     }
 }
 
