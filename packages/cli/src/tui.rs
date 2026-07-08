@@ -217,6 +217,22 @@ fn draw_waveform_area(f: &mut Frame, app: &mut App, area: Rect) {
         // 3) Bright "head" dot at the sweep (now) position.
         draw_head(&mut grid, &mut colors, row_off, h, width, color, app, left_edge_time, i);
 
+        // 4) Label the band with its signal name (left-aligned, with a
+        //    selection marker) so each trace lines up with its own label
+        //    instead of a separate, misaligned side list.
+        let selected = i == app.selected_signal;
+        let marker = if selected { "▶ " } else { "  " };
+        let label = format!("{}{}", marker, app.source.signal_info(i).name);
+        let name_cols = width.min(26);
+        for (c, ch) in label.chars().take(name_cols).enumerate() {
+            grid[row_off][c] = ch;
+            colors[row_off][c] = if selected {
+                app.theme.selected
+            } else {
+                color
+            };
+        }
+
         row_off += h;
     }
 
