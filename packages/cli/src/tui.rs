@@ -72,18 +72,20 @@ fn draw_header(f: &mut Frame, app: &App, area: Rect) {
         ),
         Span::raw(" "),
         Span::styled(
-            "WAVE VIEWER",
+            "LIVE SIMULATION",
             Style::default()
                 .fg(app.theme.text)
                 .add_modifier(Modifier::BOLD),
         ),
-        Span::raw("  "),
+        Span::raw(" "),
         Span::styled(
             format!("[ {} ]", state_text),
             Style::default()
                 .fg(state_color)
                 .add_modifier(Modifier::BOLD),
         ),
+        Span::raw(" "),
+        Span::styled("●", Style::default().fg(state_color)),
     ]);
     f.render_widget(
         Paragraph::new(line).style(Style::default().bg(app.theme.background)),
