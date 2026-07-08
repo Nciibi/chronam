@@ -1,204 +1,360 @@
 use std::io;
-use std::time::Duration;
 
-use crossterm::event::{self, Event, KeyCode, KeyEventKind, MouseEventKind};
 use crossterm::event::{DisableMouseCapture, EnableMouseCapture};
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
 use crossterm::ExecutableCommand;
 
+use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::Paragraph;
+use ratatui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph};
+use ratatui::Frame;
 use ratatui::Terminal;
 
+use crate::app::App;
 use crate::vcd::VcdData;
-
-fn val_at(changes: &[(u64, String)], t: u64, def: &str) -> String {
-    let mut v = def.to_string();
-    for (ct, cv) in changes {
-        if *ct <= t { v = cv.clone(); }
-    }
-    v
-}
-
-fn to_hex(s: &str) -> String {
-    let b = s.trim_start_matches('0');
-    if b.is_empty() { return "0".to_string(); }
-    let p = format!("{:0>w$}", b, w = (b.len() + 3) / 4 * 4);
-    let mut h = String::new();
-    for c in p.as_bytes().chunks(4) {
-        let s = std::str::from_utf8(c).unwrap_or("0000");
-        h.push_str(&format!("{:X}", u8::from_str_radix(s, 2).unwrap_or(0)));
-    }
-    h.trim_start_matches('0').to_string()
-}
-
-fn build_wave_bit(ch: &[(u64, String)], cols: usize, step: u64, t_start: u64) -> String {
-    let mut s = String::with_capacity(cols);
-    for c in 0..cols {
-        let t = t_start + c as u64 * step;
-        let nt = t + step;
-        let v = val_at(ch, t, "0");
-        let nv = val_at(ch, nt, "0");
-        s.push(match (v.as_str(), nv.as_str()) {
-            ("0", "0") => '_',
-            ("1", "1") => '\u{2594}',
-            ("0", "1") => '\u{2571}',
-            ("1", "0") => '\u{2572}',
-            _ => '_',
-        });
-    }
-    s
-}
-
-fn build_wave_bus(ch: &[(u64, String)], cols: usize, step: u64, t_start: u64, width: u32) -> String {
-    let zero = "0".repeat(width as usize);
-    let mut s = String::with_capacity(cols);
-    let mut shown = String::new();
-    let mut c = 0;
-    while c < cols {
-        let t = t_start + c as u64 * step;
-        let v = val_at(ch, t, &zero);
-        let hx = to_hex(&v);
-        if hx != shown && !hx.is_empty() && cols - c >= hx.len() {
-            s.push_str(&hx);
-            c += hx.len();
-            shown = hx;
-        } else {
-            s.push('_');
-            c += 1;
-        }
-    }
-    s
-}
+use crate::wave::{SignalState, VcdSource, WaveSource};
 
 pub fn run_interactive(data: &VcdData) -> io::Result<()> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     stdout.execute(EnterAlternateScreen)?;
     stdout.execute(EnableMouseCapture)?;
+
     let backend = ratatui::backend::CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let total_fs = data.changes.last().map(|c| c.time).unwrap_or(1_000_000_000_000).max(1);
+    let total_time_fs = data.changes.last().map(|c| c.time).unwrap_or(1_000_000_000_000).max(1);
+    let total_time_ns = total_time_fs as f64 / 1_000_000.0;
 
-    let sig_changes: Vec<Vec<(u64, String)>> = data.signals.iter().map(|sig| {
-        let mut v: Vec<(u64, String)> = data.changes.iter()
-            .filter(|c| c.id == sig.id)
-            .map(|c| (c.time, c.value.clone())).collect();
-        v.sort_by_key(|(t, _)| *t);
-        v
-    }).collect();
+    let source = VcdSource::new(data.clone());
+    let mut app = App::new(Box::new(source), total_time_ns);
 
-    let mut paused = false;
-    let win_len = total_fs.min(200_000_000_000);
-    let mut scroll_step = 3usize;
-    let mut t_start: u64 = 0;
+    let result = app.run(&mut terminal);
 
-    let tick = Duration::from_millis(30);
-    let mut prev_cols = 80usize;
-
-    loop {
-        terminal.draw(|f| {
-            let area = f.area();
-            let rows = area.height.saturating_sub(2) as usize;
-            let cols = area.width.saturating_sub(4) as usize;
-            if cols < 10 || rows < 2 || data.signals.is_empty() {
-                return;
-            }
-            prev_cols = cols;
-
-            let vis = rows.min(data.signals.len());
-            let step = win_len / cols.max(1) as u64;
-
-            let dim = Style::default().fg(Color::DarkGray);
-            let grn = Style::default().fg(Color::Green);
-            let bgrn = Style::default().fg(Color::Green).add_modifier(Modifier::BOLD);
-
-            let mut lines: Vec<Line> = Vec::new();
-
-            // ─── Header ───
-            let play = if paused { "⏸" } else { "▶" };
-            let cur_ns = (t_start + win_len / 2) / 1_000_000;
-            let win_ns = win_len / 1_000_000;
-            lines.push(Line::from(Span::styled(
-                format!(" {}  t ≈ {} ns  │ window: {} ns │ {} sigs", play, cur_ns, win_ns, data.signals.len()),
-                bgrn,
-            )));
-
-            // ─── Data rows ───
-            for si in 0..vis {
-                let sig = &data.signals[si];
-                let ch = &sig_changes[si];
-                let name = sig.name.rsplit('.').next().unwrap_or(&sig.name);
-                let depth = sig.name.chars().filter(|&c| c == '.').count();
-                let indent: String = (0..depth).map(|_| "  ").collect();
-
-                let wave = if sig.width == 1 {
-                    build_wave_bit(ch, cols, step, t_start)
-                } else {
-                    build_wave_bus(ch, cols, step, t_start, sig.width)
-                };
-
-                lines.push(Line::from(vec![
-                    Span::styled(format!("  {}{}", indent, name), bgrn),
-                    Span::raw(" │ "),
-                    Span::styled(wave, grn),
-                ]));
-            }
-
-            while lines.len() < rows + 1 {
-                lines.push(Line::from(Span::raw("")));
-            }
-
-            // ─── Status ───
-            lines.push(Line::from(Span::styled(
-                "  space:pause  ←→ speed  q:quit",
-                dim,
-            )));
-
-            f.render_widget(Paragraph::new(lines), area);
-        })?;
-
-        if !event::poll(tick)? {
-            if !paused {
-                let step = win_len / prev_cols.max(1) as u64;
-                let advance = step * scroll_step as u64;
-                t_start = t_start.saturating_add(advance);
-                if t_start + win_len > total_fs {
-                    t_start = 0;
-                }
-            }
-            continue;
-        }
-
-        match event::read()? {
-            Event::Key(k) if k.kind == KeyEventKind::Press => match k.code {
-                KeyCode::Char('q') | KeyCode::Esc => break,
-                KeyCode::Char(' ') => paused = !paused,
-                KeyCode::Char('h') | KeyCode::Left => {
-                    scroll_step = scroll_step.saturating_sub(1).max(1);
-                }
-                KeyCode::Char('l') | KeyCode::Right => {
-                    scroll_step = (scroll_step + 1).min(20);
-                }
-                _ => {}
-            },
-            Event::Mouse(m) => match m.kind {
-                MouseEventKind::ScrollDown => {
-                    scroll_step = (scroll_step + 1).min(20);
-                }
-                MouseEventKind::ScrollUp => {
-                    scroll_step = scroll_step.saturating_sub(1).max(1);
-                }
-                _ => {}
-            },
-            _ => {}
-        }
-    }
-
-    io::stdout().execute(DisableMouseCapture)?;
     disable_raw_mode()?;
     io::stdout().execute(LeaveAlternateScreen)?;
-    Ok(())
+    io::stdout().execute(DisableMouseCapture)?;
+
+    result.map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))
+}
+
+pub fn draw(f: &mut Frame, app: &mut App) {
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Min(3),
+            Constraint::Length(6),
+            Constraint::Length(1),
+        ])
+        .split(f.size());
+
+    draw_header(f, app, chunks[0]);
+    draw_status_bar(f, app, chunks[1]);
+    draw_main_area(f, app, chunks[2]);
+    draw_info_panel(f, app, chunks[3]);
+    draw_help_bar(f, app, chunks[4]);
+}
+
+fn draw_header(f: &mut Frame, app: &App, area: Rect) {
+    let state_text = if app.paused { "PAUSED" } else { "RUNNING" };
+    let state_color = if app.paused { app.theme.paused } else { Color::Green };
+
+    let line = Line::from(vec![
+        Span::styled(
+            " CHRONAM ",
+            Style::default()
+                .fg(app.theme.background)
+                .bg(app.theme.clock)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::raw(" "),
+        Span::styled(
+            "WAVE VIEWER",
+            Style::default()
+                .fg(app.theme.text)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::raw("  "),
+        Span::styled(
+            format!("[ {} ]", state_text),
+            Style::default()
+                .fg(state_color)
+                .add_modifier(Modifier::BOLD),
+        ),
+    ]);
+    f.render_widget(
+        Paragraph::new(line).style(Style::default().bg(app.theme.background)),
+        area,
+    );
+}
+
+fn draw_status_bar(f: &mut Frame, app: &App, area: Rect) {
+    let grid_style = Style::default()
+        .bg(app.theme.background)
+        .fg(Color::Rgb(30, 30, 40));
+
+    let items = [
+        format!("Sim: {:.3} us", app.timeline.current_time_ns / 1000.0),
+        format!("Cursor: {:.1} ns", app.timeline.cursor_time_ns),
+        format!("Speed: {:.1}x", app.timeline.speed),
+        format!("Zoom: {:.1} ns/ch", app.timeline.ns_per_char),
+        format!(
+            "Sigs: {}",
+            app.source.signal_count()
+        ),
+    ];
+
+    let mut spans: Vec<Span> = vec![Span::raw(" ")];
+    for item in items.iter() {
+        spans.push(Span::styled(*item, Style::default().fg(app.theme.status)));
+        spans.push(Span::raw(" │ "));
+    }
+    spans.push(Span::styled(
+        format!("FPS: {:.0}", app.fps),
+        Style::default().fg(app.theme.status),
+    ));
+
+    let line = Line::from(spans);
+    f.render_widget(Paragraph::new(line).style(grid_style), area);
+}
+
+fn draw_main_area(f: &mut Frame, app: &mut App, area: Rect) {
+    let main_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Length(24), Constraint::Min(10)])
+        .split(area);
+
+    draw_signal_list(f, app, main_chunks[0]);
+    draw_waveform_area(f, app, main_chunks[1]);
+}
+
+fn draw_signal_list(f: &mut Frame, app: &mut App, area: Rect) {
+    let items: Vec<ListItem> = (0..app.source.signal_count())
+        .map(|i| {
+            let info = app.source.signal_info(i);
+            let style = if i == app.selected_signal {
+                Style::default()
+                    .fg(app.theme.selected)
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default().fg(app.theme.signal_color(i))
+            };
+            ListItem::new(Line::from(vec![Span::styled(
+                format!(" {}", info.name),
+                style,
+            )]))
+        })
+        .collect();
+
+    let list = List::new(items)
+        .style(Style::default().bg(app.theme.background))
+        .highlight_style(Style::default().bg(Color::Rgb(30, 30, 40)));
+
+    let mut state = ListState::default();
+    state.select(Some(app.selected_signal));
+
+    let block = Block::default()
+        .borders(Borders::RIGHT)
+        .style(Style::default().bg(app.theme.background).fg(Color::Rgb(30, 30, 40)));
+
+    f.render_stateful_widget(list.block(block), area, &mut state);
+}
+
+fn draw_waveform_area(f: &mut Frame, app: &App, area: Rect) {
+    let width = area.width as usize;
+    let right_edge = app.timeline.current_time_ns;
+    let left_edge_time = app.timeline.left_edge(area.width);
+
+    let sig_count = app.source.signal_count();
+    let mut lines: Vec<Line> = Vec::with_capacity(sig_count);
+
+    for i in 0..sig_count {
+        let color = app.theme.signal_color(i);
+        let mut row: Vec<char> = vec![' '; width.max(1)];
+
+        let transitions = app.source.get_transitions(i, left_edge_time, right_edge);
+
+        let mut current_state = app.source.get_state(i, left_edge_time);
+        let mut current_x = 0.0;
+
+        for t in transitions {
+            let x_f = app.timeline.time_to_x(t, area.width).max(0.0).min(width as f64);
+            let x_int = x_f.floor() as usize;
+
+            draw_segment(&mut row, current_x as usize, x_int.min(width), &current_state);
+
+            let fraction = x_f - x_f.floor();
+            if x_int < width {
+                let next_state = app.source.get_state(i, t);
+                match (&current_state, &next_state) {
+                    (SignalState::Low, SignalState::High) => {
+                        row[x_int] = if fraction < 0.5 { '▌' } else { '▐' };
+                    }
+                    (SignalState::High, SignalState::Low) => {
+                        row[x_int] = if fraction < 0.5 { '▐' } else { '▌' };
+                    }
+                    _ => {
+                        draw_cell(&mut row, x_int, &next_state);
+                    }
+                }
+            }
+
+            current_state = app.source.get_state(i, t);
+            current_x = x_int as f64 + 1.0;
+        }
+
+        draw_segment(
+            &mut row,
+            current_x as usize,
+            width,
+            &current_state,
+        );
+
+        let spans: Vec<Span> = row
+            .iter()
+            .map(|c| {
+                Span::styled(
+                    c.to_string(),
+                    Style::default().fg(color).bg(app.theme.background),
+                )
+            })
+            .collect();
+
+        lines.push(Line::from(spans));
+    }
+
+    let wave_widget = Paragraph::new(lines).style(Style::default().bg(app.theme.background));
+    f.render_widget(wave_widget, area);
+}
+
+fn draw_segment(row: &mut [char], x_start: usize, x_end: usize, state: &SignalState) {
+    for x in x_start..x_end.min(row.len()) {
+        match state {
+            SignalState::High => row[x] = '█',
+            SignalState::Low => row[x] = '─',
+            SignalState::Unknown => row[x] = '?',
+            SignalState::HighImpedance => row[x] = 'Z',
+            SignalState::Bus(val) => {
+                if x == x_start {
+                    let chars: Vec<char> = val.chars().collect();
+                    for (j, c) in chars.iter().enumerate() {
+                        let pos = x + j;
+                        if pos >= row.len() {
+                            break;
+                        }
+                        row[pos] = *c;
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn draw_cell(row: &mut [char], x: usize, state: &SignalState) {
+    if x < row.len() {
+        match state {
+            SignalState::High => row[x] = '█',
+            SignalState::Low => row[x] = '─',
+            SignalState::Unknown => row[x] = '?',
+            SignalState::HighImpedance => row[x] = 'Z',
+            SignalState::Bus(val) => {
+                let c = val.chars().next().unwrap_or('X');
+                row[x] = c;
+            }
+        }
+    }
+}
+
+fn draw_info_panel(f: &mut Frame, app: &App, area: Rect) {
+    let info = app.source.signal_info(app.selected_signal);
+    let state = app.source.get_state(app.selected_signal, app.timeline.cursor_time_ns);
+    let trans_count = app.source.count_transitions(
+        app.selected_signal,
+        0.0,
+        app.timeline.cursor_time_ns,
+    );
+
+    let val_str = match &state {
+        SignalState::High => "HIGH".into(),
+        SignalState::Low => "LOW".into(),
+        SignalState::Bus(v) => format!("0x{:X}", u64::from_str_radix(v.trim_start_matches('0'), 2).unwrap_or(0)),
+        SignalState::Unknown => "UNKNOWN".into(),
+        SignalState::HighImpedance => "HIGH-Z".into(),
+    };
+
+    let time_str = format!("{:.3} us", app.timeline.current_time_ns / 1000.0);
+    let cursor_str = format!("{:.1} ns", app.timeline.cursor_time_ns);
+    let speed_str = format!("{:.1}x", app.timeline.speed);
+    let zoom_str = format!("{:.1} ns/ch", app.timeline.ns_per_char);
+
+    let text = vec![
+        Line::from(vec![
+            Span::styled(" Signal  : ", Style::default().fg(app.theme.text)),
+            Span::styled(
+                info.name.clone(),
+                Style::default()
+                    .fg(app.theme.selected)
+                    .add_modifier(Modifier::BOLD),
+            ),
+        ]),
+        Line::from(vec![
+            Span::styled(" Type    : ", Style::default().fg(app.theme.text)),
+            Span::styled(info.signal_type.clone(), Style::default().fg(app.theme.data)),
+        ]),
+        Line::from(vec![
+            Span::styled(" Value   : ", Style::default().fg(app.theme.text)),
+            Span::styled(val_str, Style::default().fg(app.theme.clock)),
+        ]),
+        Line::from(vec![
+            Span::styled(" Time    : ", Style::default().fg(app.theme.text)),
+            Span::styled(cursor_str, Style::default().fg(app.theme.status)),
+            Span::styled("  (sim ", Style::default().fg(app.theme.text)),
+            Span::styled(time_str, Style::default().fg(app.theme.status)),
+            Span::styled(")", Style::default().fg(app.theme.text)),
+        ]),
+        Line::from(vec![
+            Span::styled(" Speed   : ", Style::default().fg(app.theme.text)),
+            Span::styled(speed_str, Style::default().fg(app.theme.enable)),
+            Span::styled("  Zoom: ", Style::default().fg(app.theme.text)),
+            Span::styled(zoom_str, Style::default().fg(app.theme.enable)),
+        ]),
+        Line::from(vec![
+            Span::styled(
+                format!(" Transitions: {}", trans_count),
+                Style::default().fg(app.theme.status),
+            ),
+            Span::styled(
+                format!("  │ FPS: {:.0}", app.fps),
+                Style::default().fg(app.theme.status),
+            ),
+        ]),
+    ];
+
+    let block = Block::default()
+        .borders(Borders::TOP)
+        .style(Style::default().bg(app.theme.background).fg(app.theme.text));
+
+    f.render_widget(Paragraph::new(text).block(block), area);
+}
+
+fn draw_help_bar(f: &mut Frame, app: &App, area: Rect) {
+    let text = if app.show_help {
+        " [Space] Pause  [↑↓] Select  [+/-] Speed  [z/x] Zoom  [←→] Cursor  [h] Help  [q] Quit"
+    } else {
+        " Press [h] for help"
+    };
+
+    let line = Line::from(vec![Span::styled(
+        format!(" {} ", text),
+        Style::default()
+            .fg(app.theme.background)
+            .bg(app.theme.text),
+    )]);
+    f.render_widget(
+        Paragraph::new(line).style(Style::default().bg(app.theme.background)),
+        area,
+    );
 }
