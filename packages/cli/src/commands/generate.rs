@@ -31,7 +31,8 @@ pub fn run(vhdl_path: &str, _cli: &Cli) -> Result<()> {
     let ports = extract_ports(&content);
 
     let project_name = entity.to_lowercase();
-    let out_dir = Path::new(&format!("{}_sim", project_name));
+    let dir_name = format!("{}_sim", project_name);
+    let out_dir = Path::new(&dir_name);
     fs::create_dir_all(out_dir).with_context(|| format!("Failed to create {}", out_dir.display()))?;
 
     let tb_filename = format!("testbench_{}.vhdl", project_name);

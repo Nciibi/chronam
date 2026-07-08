@@ -23,7 +23,6 @@ pub struct Cli {
     pub run_sim: Option<String>,
 
     #[command(subcommand)]
-    #[arg(group = "mode")]
     pub command: Option<Commands>,
 
     #[arg(short = 'v', long = "verbose", global = true, help = "Enable verbose output")]
@@ -77,7 +76,7 @@ impl Cli {
 
         // Mode 1: bare file path → generate testbench
         if let Some(ref vhdl_path) = self.file {
-            return gen::run(vhdl_path, self);
+            return generate::run(vhdl_path, self);
         }
 
         // Mode 2: --run-sim → simulate + TUI
@@ -102,9 +101,9 @@ impl Cli {
                 Commands::Info(args) => info::run(args, self),
             },
             None => {
-                // No args at all — print help
                 <Cli as CommandFactory>::command().print_help()?;
                 println!();
+                Ok(())
             }
         }
         Ok(())
