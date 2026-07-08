@@ -49,7 +49,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
             Constraint::Length(6),
             Constraint::Length(1),
         ])
-        .split(f.size());
+        .split(f.area());
 
     draw_header(f, app, chunks[0]);
     draw_status_bar(f, app, chunks[1]);

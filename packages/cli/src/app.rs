@@ -17,6 +17,7 @@ pub struct App {
     pub should_quit: bool,
     pub fps: f64,
     pub show_help: bool,
+    #[allow(dead_code)]
     pub scroll_offset: usize,
 }
 
