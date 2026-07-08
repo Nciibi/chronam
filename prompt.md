@@ -1,637 +1,157 @@
-Here is the complete, production-ready Rust codebase for CHRONAM.
+Visionneuse d’ondes VHDL en CLI (style GTKWave)
+Sommaire exécutif. Nous proposons un visualiseur d’ondes entièrement en ligne de commande, écrit en Rust, capable de reproduire fidèlement le rendu de GTKWave (traces de signaux verts sur fond noir quadrillé). Le programme supportera les formats de dump standard (VCD, FST, LXT/LXT2, VZT, ainsi que les traces VHDL GHW). L’accent sera mis sur la performance (parser en flux, mémoire minimale) et la qualité d’affichage (anti-aliasing, contrôle de couleur) dans le terminal, avec prise en charge des terminaux 24 bits et repli sur 256/16 couleurs si nécessaire. Nous détaillons ci-dessous les exigences visuelles précises, les formats d’entrée, les méthodes de rendu (de l’ASCII simple aux protocoles graphiques Kitty/Sixel), l’architecture logicielle, les estimations de performance, les bibliothèques Rust recommandées (par ex. crates vcd, fstapi, wellen), l’interface utilisateur (flags, commandes, zoom/pan), les tests et la planification du projet.
 
-The architecture strictly follows your requirements: it is modular, zero-allocation during rendering, fully asynchronous, and uses sub-character precision to achieve true 60 FPS smooth animation reminiscent of a medical ECG monitor.
+1. Exigences fonctionnelles et visuelles
+Le rendu doit correspondre exactement au style de l’image fournie : traces vertes de type oscilloscope sur un fond noir quadrillé, avec multiples canaux (numériques et analogiques) empilés verticalement, échelles temporelles, étiquettes de signaux, et courbes lissées. Exigences détaillées :
 
-1. Project Setup (Cargo.toml)
-toml
-Copy
-[package]
-name = "chronam"
-version = "0.1.0"
-edition = "2021"
+Grille et axes : arrière-plan complètement noir (#000000), grille de fines lignes vert foncé (par ex. #004000) espacées régulièrement. La capture montre des carrés (~*128px*), avec des traits vert plus clair (ex. #00FF00) pour les axes majeurs et labels (« 0, 400, 800… »). Il faut pouvoir configurer l’écartement (p. ex. chaque 100 unités de temps avec une ligne plus épaisse) et dessiner des graduations temporelles sous le signal.
+Couleurs : traces en vert vif (#00FF00 ou proche), éventuellement aliasing/clignotement doux. La palette cible est 24-bit (« truecolor ») pour un rendu exact, avec retombée en palette 256 couleurs si nécessaire (en dither antialiasé si terminal 8/16 bits). Les signaux numériques (0/1) et analogiques (valeurs continues) doivent avoir des couleurs identifiables – typiquement toutes en vert, mais on pourrait offrir des options de teintes/contraste.
+Épaisseur de ligne et lissage : Les traces doivent être précises (1-2 px), avec antialiasing pour éviter le crénelage sur courbes (surtout sinusoïdales). Dans l’image, les lignes sont légèrement floues (sous-échantillonnées) afin d’être lisibles. Les transitions franches (fronts 0→1) utilisent des angles nets, tandis que les signaux analogiques sont dessinés en courbes lissées. On choisira une police monospace afin que chaque “pixel” virtuel soit carré, et des caractères Unicode braille/blocks pour la version ASCII (voir plus bas).
+Texte et étiquettes : Les légendes de canaux (noms de signaux) et les unités de temps doivent être affichées en clair (p. ex. police monospace ANSI de terminal). En mode image graphique (Kitty/Sixel), le texte peut être rendu à l’aide d’une librairie de font (par ex. RustType) sur le bitmap. En mode pure-texte, on alignera les étiquettes à gauche de chaque canal.
+Terminal : On supposera par défaut un terminal moderne supportant 24-bit (Kitty, WezTerm, iTerm2, etc.), avec une taille minimale (par ex. 100×30) suffisante. Le programme détectera la profondeur de couleur (tput colors ou protocoles) et utilisera le mode approprié. En cas de limitation (ex. XTerm sans truecolor), on émule via 256 couleurs ANSI avec dithering sur les signaux continus. Les titres et polices doivent rester lisibles sur fond noir.
+2. Formats d’entrée et parsing
+Formats pris en charge. On cible VCD (Verilog Value Change Dump, standard IEEE‑1364), FST (Fast Signal Trace de GTKWave), et formats spécifiques VHDL comme GHW (GHDL Wave, 9 états). GTKWave supporte aussi LXT/LXT2/VZT (formats GTKWave optimisés) et GHW (VHDL). Les formats à considérer :
 
-[dependencies]
-ratatui = { version = "0.26", features = ["all-widgets"] }
-crossterm = "0.27"
-tokio = { version = "1.36", features = ["full"] }
-anyhow = "1.0"
-unicode-width = "0.1"
-
-[profile.release]
-opt-level = 3
-lto = true
-codegen-units = 1
-2. Application Entry & Terminal Lifecycle (src/main.rs)
-rust
-Copy
-use anyhow::Result;
-use chronam::app::App;
-use chronam::wave::MockSource;
-
-#[tokio::main]
-async fn main() -> Result<()> {
-    // Initialize terminal
-    let mut terminal = ratatui::init();
-    terminal.clear()?;
-
-    // Create the live data source and application state
-    let source = MockSource::new();
-    let mut app = App::new(source);
-
-    // Run the main loop
-    let result = app.run(&mut terminal).await;
-
-    // Restore terminal
-    ratatui::restore();
-    result
-}
-3. Wave Source & Traits (src/wave.rs)
-The renderer is completely decoupled from the data source via the WaveSource trait. This allows future integration with VCD/FST parsers or network streams without modifying the UI.
+VCD (IEEE‑1364) : Format ASCII universel, 4 états (0,1,X,Z) pour signaux numériques et chaînes de bits. Très verbeux (de l’ordre de plusieurs Go pour de gros projets). Nous utiliserons des crates Rust existantes (p. ex. vcd ou vcd_parser) pour lire en streaming sans charger tout en mémoire. Le crate vcd offre un parser BufRead itératif. Il gère les sections de déclaration ($var, $scope) et les changements de valeurs au fil du temps, et autorise la lecture incrémentale.
+FST : Format binaire rapide conçu par l’auteur de GTKWave comme alternative au VCD. Il permet un accès beaucoup plus rapide et compact. On pourra utiliser le crate fstapi (wrapper Rust de l’API FST) pour lire efficacement les variables et les données temporelles. FST stocke les valeurs en blocs avec horodatages, facilitant le streaming partiel.
+LXT/LXT2/VZT : Ancienne famille optimisée. GTKWave 4 prévoit leur abandon, mais on peut envisager un support via conversion interne (par ex. appeler vcd2lxt de GTKWave) ou via wellen qui gère certains cas.
+GHW (GHDL) : Spécifique VHDL (champ X ou H…), on peut utiliser une librairie dédiée si elle existe, ou bien forcer GHDL à sortir un VCD/FST, voire parser nous-même (format proche de VCD). D’après GTKWave, GHDL peut générer un VCD nativement, ou son propre GHW.
+FFI/lib externe : GTKWave fournit des outils (fst2vcd, lxt2vcd, etc). En Rust, on visera les crates natives pour éviter les dépendances C. Le crate wellen est intéressant : c’est une bibliothèque Rust rapide pour VCD/FST/GHW (interface générique “SignalSource” par ex., supporte flux et sous-ensemble de signaux).
+Pour chaque format, on construira un parser en flux capable de lire block par block (ex. via BufReader). Il faudra retenir uniquement les informations nécessaires (horodatage courant, changement de niveau) pour générer le tracé sans stocker tout l’historique (streaming). Par exemple :
 
 rust
-Copy
-pub enum SignalState {
-    Low,
-    High,
-    Bus(String),
-    Unknown,
-    HighImpedance,
-}
-
-pub struct SignalInfo {
-    pub name: String,
-    pub path: String,
-    pub signal_type: String,
-    pub driver: String,
-    pub period_ns: f64,
-    pub frequency_mhz: f64,
-    pub duty_cycle: f64,
-}
-
-pub trait WaveSource: Send {
-    fn signal_count(&self) -> usize;
-    fn signal_info(&self, idx: usize) -> SignalInfo;
-    fn get_state(&self, idx: usize, time_ns: f64) -> SignalState;
-    fn get_transitions(&self, idx: usize, start_ns: f64, end_ns: f64) -> Vec<f64>;
-    fn count_transitions(&self, idx: usize, start_ns: f64, end_ns: f64) -> u64;
-}
-
-/// A mock source generating live ECG-like patterns
-pub struct MockSource {
-    signals: Vec<SignalInfo>,
-}
-
-impl MockSource {
-    pub fn new() -> Self {
-        let signals = vec![
-            SignalInfo {
-                name: "clk".into(), path: "top.clk".into(), signal_type: "std_logic".into(),
-                driver: "clock_generator".into(), period_ns: 20.0, frequency_mhz: 50.0, duty_cycle: 50.0,
-            },
-            SignalInfo {
-                name: "reset".into(), path: "top.reset".into(), signal_type: "std_logic".into(),
-                driver: "sys_ctrl".into(), period_ns: 0.0, frequency_mhz: 0.0, duty_cycle: 0.0,
-            },
-            SignalInfo {
-                name: "enable".into(), path: "top.enable".into(), signal_type: "std_logic".into(),
-                driver: "sys_ctrl".into(), period_ns: 0.0, frequency_mhz: 0.0, duty_cycle: 0.0,
-            },
-            SignalInfo {
-                name: "data[7:0]".into(), path: "top.data".into(), signal_type: "std_logic_vector".into(),
-                driver: "data_drv".into(), period_ns: 0.0, frequency_mhz: 0.0, duty_cycle: 0.0,
-            },
-        ];
-        Self { signals }
+Copier
+let file = File::open(vcd_path)?;
+let mut parser = vcd::Parser::new(BufReader::new(file));
+let header = parser.parse_header()?; // récupère signaux et codes
+for cmd in parser {
+    match cmd? {
+        vcd::Command::ChangeScalar(id, val) => { /* stocker transition */ }
+        vcd::Command::ChangeVector(id, bits) => { /* etc */ }
+        vcd::Command::Timestamp(t) => { /* avancer l’horloge */ }
+        _ => {}
     }
 }
+Cette boucle en streaming minimise la mémoire (lire ligne par ligne) et permet de mettre à jour les états de signaux au fil de l’eau. Pour les formats bloc (FST), on exploitera les structures optimisées du crate (fstapi::Reader).
 
-impl WaveSource for MockSource {
-    fn signal_count(&self) -> usize { self.signals.len() }
+3. Approches de rendu dans le terminal
+Plusieurs stratégies sont possibles, de l’ASCII pur aux images bitmap intégrées. Chacune a ses avantages et inconvénients :
 
-    fn signal_info(&self, idx: usize) -> SignalInfo { self.signals[idx].clone() }
+Caractères ASCII/Unicode :
 
-    fn get_state(&self, idx: usize, time_ns: f64) -> SignalState {
-        match idx {
-            0 => { // clk (50MHz, 50% duty)
-                if (time_ns % 20.0) < 10.0 { SignalState::High } else { SignalState::Low }
-            }
-            1 => { // reset
-                if time_ns < 150.0 { SignalState::High } else { SignalState::Low }
-            }
-            2 => { // enable
-                if time_ns > 200.0 && (time_ns % 400.0) < 200.0 { SignalState::High } else { SignalState::Low }
-            }
-            3 => { // data
-                let val = ((time_ns / 50.0).floor() as u8) & 0xFF;
-                SignalState::Bus(format!("0x{:02X}", val))
-            }
-            _ => SignalState::Unknown,
-        }
-    }
+Braille (U+2800-28FF) : Chaque caractère braille fournit une matrice de 2×4 « points ». Cela donne une résolution multipliée (par rapport à un caractère plein) pour tracer des courbes lisses. Les librairies comme textplots exploitent ce principe. La fidélité est moyenne (subpixels limités), mais c’est extrêmement portable (uniquement Unicode). Idéal pour un fallback rapide.
+Segments/boîtes Unicode : « ▄ », « ▀ », « ⣿ » etc. Moins flexibles que le braille pour les formes irrégulières, mais très supportés.
+0/1 ou # (texte brut) : qualité très basse (affiche simplement 0 et 1), à éviter si possible (comme le constatait l’utilisateur).
+Perf. : Ces méthodes sont rapides (très peu de calculs) et utilisent peu de mémoire. Complexité d’implémentation faible (tracer avec caractères).
+Support : Universel sur tous terminaux (UTF-8 requis). Ne gère pas les couleurs au pixel près, mais on peut colorer les blocs avec 256-colors ANSI.
+Usage : Cas d’utilisation « dégradé » où aucun terminal graphique n’est disponible, ou pour diagnostics légers.
+Images bitmap (protocoles graphiques) :
 
-    fn get_transitions(&self, idx: usize, start_ns: f64, end_ns: f64) -> Vec<f64> {
-        let mut trans = Vec::new();
-        match idx {
-            0 => { // clk transitions every 10ns
-                let mut t = (start_ns / 10.0).ceil() * 10.0;
-                while t <= end_ns {
-                    if t >= start_ns { trans.push(t); }
-                    t += 10.0;
-                }
-            }
-            1 => if start_ns <= 150.0 && end_ns >= 150.0 { trans.push(150.0); },
-            2 => {
-                let mut t = (start_ns / 200.0).ceil() * 200.0;
-                if t == 0.0 { t = 200.0; }
-                while t <= end_ns {
-                    if t >= start_ns && t >= 200.0 { trans.push(t); }
-                    t += 200.0;
-                }
-            }
-            3 => {
-                let mut t = (start_ns / 50.0).ceil() * 50.0;
-                while t <= end_ns {
-                    if t >= start_ns { trans.push(t); }
-                    t += 50.0;
-                }
-            }
-            _ => {}
-        }
-        trans
-    }
+Kitty Graphics Protocol : Permet d’afficher du PNG/RGB inline dans le terminal Kitty (et compatibles comme WezTerm). Excellente fidélité (anti-aliasing, 24-bit) et les images intègrent le texte et les tracés. Complexe à implanter (nécessite coder l’échappement et peut-être base64/compression) mais fiable.
+iTerm2/Image Protocol : Similaire (OSC 1337), supporté par iTerm2, WezTerm, quelquefois Konsole. On peut envoyer des images PNG via un escape unique.
+SIXEL : Ancien protocole bitmap (« sixel ») supporté par XTerm, DEC ou Linux consoles (voir Are We Sixel Yet?). Bon compromis universel: qualité raisonnable, palette 256, mais moins optimisé (encode large). Implémentation via libsixel (crates sixel ou sixel_sys).
+Perf. : Rendu plus coûteux (génération d’image via image crate, encodage sixel/Base64). Le Kitty peut être lent à recevoir de gros blocs, Sixel est désuet en compression.
+Support : Kitty/iTerm ont usage restreint (ne fonctionnent pas partout), mais donnent le meilleur aspect. Sixel est plus répandu (vt340, xterm, libsixel) mais souvent désactivé par défaut.
+Mémoire : Les images nécessitent un tampon (buffer d’image, p. ex. 1920×1080 px * 4 octets ≈ 8 MB).
+Usage : Pour un rendu « identique à GTKWave », le protocole Kitty (ou iTerm2) sera recommandé sur les terminaux qui le supportent (couleurs réelles, anti-alias). Sixel peut être une solution alternative multi-plateforme.
+Backend	Fidélité visuelle	Performance	Support Terminal	Complexité	Mémoire	Cas d’usage
+ASCII/Unicode (0/1)	★☆☆☆☆ (très faible)	★★★★★ (très rapide)	Universel (ANSI/UTF-8)	★☆☆☆☆ (très simple)	~nul	Debug rapide, fallback lourd
+Unicode Braille	★★☆☆☆	★★★★☆	Universel (UTF-8)	★★☆☆☆	négligeable	Fallback textuel de qualité moyenne
+Sixel (bitmap)	★★★★☆	★★★☆☆	XTerm, Linux terminals (DECs)	★★★☆☆	modéré (quelques Mo)	Format bitmap portable (256 couleurs)
+Kitty Graphics	★★★★★	★★☆☆☆	Kitty, WezTerm, compatibles	★★★★☆	élevé (image RGBA)	Meilleure qualité si disponible
+iTerm2 Image OSC	★★★★★	★★☆☆☆	iTerm2 (macOS), WezTerm, Konsole	★★★★☆	élevé	Usage Mac/specific, très haute qualité
 
-    fn count_transitions(&self, idx: usize, start_ns: f64, end_ns: f64) -> u64 {
-        // Simple approximation for the mock. Real impl would be exact.
-        self.get_transitions(idx, start_ns, end_ns).len() as u64
+Chaque backend peut être choisi dynamiquement selon l’émulateur détecté. Le tableau ci-dessus résume les compromis majeurs.
+
+4. Architecture logicielle et pipeline de rendu
+L’architecture cible est un pipeline en flux :
+
+Parser en streaming : Lit le fichier (VCD/FST…) ligne à ligne (ou bloc par bloc) et extrait les événements (horodatage, changement de chaque signal). On crée une structure interne (SignalSource) associant à chaque signal sa liste de transitions temporelles (possiblement compressées). On évite de tout stocker en mémoire : après avoir projeté un segment de données sur l’affichage courant, on peut purger les vieux échantillons.
+Mise à l’échelle temporelle (time-to-pixel) : L’utilisateur spécifie la fenêtre temporelle visible (min, max, facteur de zoom). On détermine les coordonnées X dans l’image (ou la colonne de caractères) correspondant à ces instants. Pour éviter le suraffichage sur longue durée, on applique du downsampling : par exemple, pour chaque pixel X, on agrège les états d’un signal (min/max ou fil de valeur) pour préserver les transitions importantes sans saturer. Cette étape produit un buffer 2D de valeurs (booléennes pour numériques, réelles pour analogiques).
+Rendu couche par couche (layering) : On dessine d’abord la grille verticale/horizontale, puis chaque canal de signal (stacké verticalement) dans l’ordre. Les signaux numériques sont tracés en lignes horizontales successives (hauteur constante), en binaire (niveau haut/bas). Les signaux analogiques (voltages réels) sont tracés en courbes continues (linéarisées pixel à pixel). On peut appliquer des styles ou couleurs différents par canal.
+Génération d’image ou de caractère : Selon le backend choisi :
+ASCII/Braille : On parcourt le buffer et on génère une ligne de texte par tranche verticale (possiblement 4 ou 8 pixels par caractère pour braille). Les caractères Unicode correspondants sont choisis (utilisation de textplots ou similar), et on ajoute des codes ANSI de couleur (via crossterm par ex.).
+Image bitmap : On crée un objet ImageBuffer<Rgb> (via crate image), on dessine les lignes (lib imageproc) et le texte (lib rusttype ou fontdue). On encode ensuite en PNG et on envoie le flux (via rasteroid crate ou en codant l’escape Kitty/Sixel).
+Intégration texte : Si on affiche en image, on peut dessiner les légendes et échelles directement dans l’image. Sinon (graphique pur), on placera du texte en surimpression (Kitty permet de mélanger pixels+texte).
+Gestion dynamique : En mode interactif (voir UX), ce pipeline peut être ré-exécuté suite à un zoom/pan ou toggle de canaux. Un cache intelligent pourrait conserver les dernières images rendues et actualiser seulement la partie visible.
+5. Performances et mémoire (cas 1 GB VCD)
+Pour de très gros fichiers VCD (~1 Go, millions de changements) :
+
+Parser : Un parser Rust optimisé (comme vcd ou wellen) peut atteindre plusieurs centaines de Mo/s en lecture brute, soit quelques secondes pour 1 Go. En pratique, on lit séquentiellement et on traite chaque ligne en O(1). L’horloge (timestamp) et quelques variables courantes sont en mémoire. Temps estimé ~5–15 s en C optimisé (plus en Rust sécurisé).
+Mémoire : On évite de charger tout. L’approche streaming + downsampling permet de ne stocker que les états courants et un tampon pour l’affichage. Ex. à 1 Go VCD on peut limiter la consommation à ~50–100 Mo (pour les métadonnées + tampon d’image). Si on charge tout en RAM (non souhaitable), cela monterait à plusieurs Go (1 Go de texte non compressé = ~70 Mo de données en mémoire après parsing).
+Image rendu : Générer une image de taille standard (p.ex. 1920×1080) implique ~8 Mo de RAM pour le buffer RGBA, plus overhead PNG (~2 Mo). L’encodage PNG peut être coûteux (compression), mais acceptable en temps (quelques ms).
+Profilage suggéré : Utiliser cargo bench ou profilers (perf, heaptrack) pour identifier les goulets (parsing vs rendu). Vérifier le FPS pour les mises à jour interactives. Si le parsing reste trop lent, on peut utiliser le crate rayon pour paralléliser le découpage temporel (p.ex. diviser le fichier ou les signaux).
+Budget mémoire : On peut plafonner la mémoire totale du processus (p.ex. 200 Mo) en purgeant le buffer de signal historique dès qu’il n’est plus affiché. Des structures comme wellen::CompressedSignal permettent de compresser les valeurs (delta+gzip) pour réduire l’empreinte.
+6. Crates Rust recommandés et extraits de code
+Parsing VCD : vcd. Exemple de boucle streaming :
+rust
+Copier
+let mut parser = vcd::Parser::new(BufReader::new(File::open("sim.vcd")?));
+let header = parser.parse_header()?;
+let clock_id = header.find_var(&["top","clk"]).unwrap().code;
+for command in parser {
+    match command? {
+        vcd::Command::ChangeScalar(id, value) => { /* usage */ }
+        vcd::Command::ChangeVector(id, bits) => { /* usage */ }
+        vcd::Command::Timestamp(t) => { current_time = t; }
+        _ => {}
     }
 }
-4. Timeline & Zoom Math (src/timeline.rs)
-Includes unit tests for timeline logic to ensure mapping between time and screen space is perfectly accurate.
+Parsing FST : fstapi permet de faire fstapi::Reader::open("file.fst") et itérer sur .vars() et .iter_values(). On exécute reader.next() en boucle.
+Interface unifiée : wellen peut lire VCD/FST/GHW avec une seule API (structures Hierarchy, SignalSource), et propose des options de filtrage de signaux (utile pour gros dumps).
+Terminal & rendu : crossterm pour sortie ANSI (couleurs, saisie clavier), textplots ou braille-canvas pour dessin en braille. Pour images : image (dessin) + imageproc/rusttype (texte). Pour l’émission de l’image en terminal, rasteroid avec son encodeur Kitty/Sixel est idéal (il gère la création des escapes).
+Exemple : envoi d’une image PNG via le protocole Kitty (bibliothèque rasteroid exemple) :
 
 rust
-Copy
-pub struct Timeline {
-    pub current_time_ns: f64,
-    pub cursor_time_ns: f64,
-    pub ns_per_char: f64,
-    pub speed: f64,
-}
+Copier
+use rasteroid::{RasterEncoder, RGB, KittyEncoder};
 
-impl Timeline {
-    pub fn new() -> Self {
-        Self {
-            current_time_ns: 1000.0,
-            cursor_time_ns: 800.0,
-            ns_per_char: 5.0,
-            speed: 1.0,
-        }
-    }
+// Supposons `frame` est un buffer Rgb<u8> de l’image.
+let mut encoder = KittyEncoder::new();
+// configure options (position, taille, etc)
+encoder
+    .send_frame(&frame,  // donneé image
+                800,     // largeur
+                300,     // hauteur
+                1.0       // échelle (1:1)
+    )?;
+Ce code génère les séquences d’échappement nécessaires. Pour SIXEL, on utiliserait SixelEncoder.
 
-    pub fn step(&mut self, delta_secs: f64) {
-        // Advance time. 1x speed = 100ns per second of real time.
-        let delta_ns = delta_secs * 100.0 * self.speed;
-        self.current_time_ns += delta_ns;
-        self.cursor_time_ns += delta_ns;
-    }
+7. UX CLI et commandes
+Commande principale (exemple) :
+css
+Copier
+waveview [options] fichier.vcd
+Options usuelles :
+-w, --width, -h, --height : dimensions de l’affichage (pixels ou caractères).
+-t, --timescale [TIME] : unité de temps (ns, µs…) ou calibrage.
+-z, --zoom N : facteur de zoom horizontal (accelerer/ralentir).
+-s, --start T, -e, --end T : début/fin de la fenêtre temporelle.
+-c, --channel SIG : filtre sur certains signaux (ou --exclude).
+--mode [ascii|braille|sixel|kitty] : forcer le backend de rendu.
+-o, --output file : en mode image, sortir PNG.
+-l, --list-signals : lister les signaux disponibles.
+--palette <file> : configurer couleurs (toml ou json).
+Contrôles interactifs : Si on active l’interaction (p.ex. avec --interactive), on peut permettre :
+Clavier < et > : zoom temporel.
+Flèches ←→ : défilement (pan).
+Flèches ↑↓ : changer la résolution verticale ou basculer canaux.
+Touche Space : pause/défilement continu.
+s : prendre un screenshot du terminal.
+q ou Esc : quitter.
+Fichier de configuration : Par exemple un fichier ~/.config/waveview/config.toml pour définir par défaut les couleurs de grille, échelle de temps, alias de signaux, chemin vers convertisseurs externes, etc.
+La documentation CLI doit fournir de l’aide (--help) détaillée. Idéalement, on pourrait utiliser clap pour gérer les arguments et générer le manuel, et [reedline ou crossterm] pour l’interactivité.
 
-    pub fn time_to_x(&self, time: f64, width: u16) -> f64 {
-        let right_edge = self.current_time_ns;
-        let left_edge = right_edge - (width as f64 * self.ns_per_char);
-        ((time - left_edge) / self.ns_per_char).max(-1.0).min(width as f64 + 1.0)
-    }
-
-    pub fn x_to_time(&self, x: u16, width: u16) -> f64 {
-        let left_edge = self.current_time_ns - (width as f64 * self.ns_per_char);
-        left_edge + (x as f64 * self.ns_per_char)
-    }
-
-    pub fn zoom_in(&mut self) {
-        self.ns_per_char = (self.ns_per_char / 1.2).max(0.5);
-    }
-
-    pub fn zoom_out(&mut self) {
-        self.ns_per_char = (self.ns_per_char * 1.2).min(1000.0);
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_time_x_conversion() {
-        let mut tl = Timeline::new();
-        tl.current_time_ns = 1000.0;
-        tl.ns_per_char = 10.0;
-        let width = 100u16;
-        
-        // Right edge is 1000, left edge is 0
-        assert_eq!(tl.time_to_x(1000.0, width), 100.0);
-        assert_eq!(tl.time_to_x(0.0, width), 0.0);
-        assert_eq!(tl.x_to_time(50, width), 500.0);
-    }
-}
-5. Color Palette (src/theme.rs)
-rust
-Copy
-use ratatui::style::Color;
-
-pub struct Theme {
-    pub background: Color,
-    pub clock: Color,
-    pub reset: Color,
-    pub enable: Color,
-    pub data: Color,
-    pub unknown: Color,
-    pub selected: Color,
-    pub status: Color,
-    pub paused: Color,
-    pub text: Color,
-}
-
-impl Theme {
-    pub fn new() -> Self {
-        Self {
-            background: Color::Rgb(10, 12, 16),
-            clock: Color::Rgb(0, 255, 255),
-            reset: Color::Rgb(255, 50, 80),
-            enable: Color::Rgb(0, 255, 150),
-            data: Color::Rgb(255, 200, 0),
-            unknown: Color::Rgb(255, 100, 0),
-            selected: Color::White,
-            status: Color::Rgb(100, 150, 255),
-            paused: Color::Rgb(255, 191, 0),
-            text: Color::Rgb(200, 200, 220),
-        }
-    }
-
-    pub fn get_signal_color(&self, idx: usize) -> Color {
-        match idx {
-            0 => self.clock,
-            1 => self.reset,
-            2 => self.enable,
-            3 => self.data,
-            _ => self.unknown,
-        }
-    }
-}
-6. Application State & Event Loop (src/app.rs)
-Non-blocking 60 FPS loop using tokio::select!.
-
-rust
-Copy
-use std::time::{Duration, Instant};
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
-use ratatui::{backend::Backend, Terminal};
-use anyhow::Result;
-use crate::wave::WaveSource;
-use crate::timeline::Timeline;
-use crate::theme::Theme;
-
-pub struct App {
-    pub source: Box<dyn WaveSource>,
-    pub timeline: Timeline,
-    pub theme: Theme,
-    pub selected_signal: usize,
-    pub paused: bool,
-    pub should_quit: bool,
-    pub fps: f64,
-    pub show_help: bool,
-}
-
-impl App {
-    pub fn new(source: impl WaveSource + 'static) -> Self {
-        Self {
-            source: Box::new(source),
-            timeline: Timeline::new(),
-            theme: Theme::new(),
-            selected_signal: 0,
-            paused: false,
-            should_quit: false,
-            fps: 0.0,
-            show_help: false,
-        }
-    }
-
-    pub async fn run<B: Backend>(&mut self, terminal: &mut Terminal<B>) -> Result<()> {
-        let mut last_tick = Instant::now();
-        let mut frame_count = 0;
-        let mut fps_timer = Instant::now();
-
-        loop {
-            if self.should_quit {
-                return Ok(());
-            }
-
-            // Non-blocking event polling
-            let timeout = Duration::from_millis(16).saturating_sub(last_tick.elapsed());
-            if tokio::task::yield_now().is_ok() {} // cooperative yield
-            
-            if event::poll(timeout)? {
-                if let Event::Key(key) = event::read()? {
-                    if key.kind == KeyEventKind::Press {
-                        self.handle_key(key);
-                    }
-                }
-            }
-
-            let now = Instant::now();
-            let delta = now.duration_since(last_tick).as_secs_f64();
-            last_tick = now;
-
-            if !self.paused {
-                self.timeline.step(delta);
-            }
-
-            terminal.draw(|f| crate::ui::draw(f, self))?;
-
-            // FPS Calculation
-            frame_count += 1;
-            if fps_timer.elapsed() >= Duration::from_secs(1) {
-                self.fps = frame_count as f64 / fps_timer.elapsed().as_secs_f64();
-                frame_count = 0;
-                fps_timer = Instant::now();
-            }
-        }
-    }
-
-    fn handle_key(&mut self, key: KeyEvent) {
-        match key.code {
-            KeyCode::Char('q') | KeyCode::Esc => self.should_quit = true,
-            KeyCode::Char(' ') => self.paused = !self.paused,
-            KeyCode::Down => {
-                let count = self.source.signal_count();
-                if self.selected_signal < count - 1 { self.selected_signal += 1; }
-            }
-            KeyCode::Up => {
-                if self.selected_signal > 0 { self.selected_signal -= 1; }
-            }
-            KeyCode::Char('+') | KeyCode::Char('=') => self.timeline.speed = (self.timeline.speed * 1.5).min(10.0),
-            KeyCode::Char('-') | KeyCode::Char('_') => self.timeline.speed = (self.timeline.speed / 1.5).max(0.1),
-            KeyCode::Char('z') => self.timeline.zoom_in(),
-            KeyCode::Char('x') => self.timeline.zoom_out(),
-            KeyCode::Char('h') => self.show_help = !self.show_help,
-            _ => {}
-        }
-    }
-}
-7. UI & Sub-Pixel Waveform Rendering (src/ui.rs)
-This is where the magic happens. To achieve the "medical monitor" smoothness without jitter, we map exact floating-point time coordinates to character cells, using partial block characters (▌, ▐) for transitions that fall in the middle of a terminal cell.
-
-rust
-Copy
-use ratatui::{
-    layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
-    text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
-    Frame,
-};
-use crate::app::App;
-use crate::wave::SignalState;
-
-pub fn draw(f: &mut Frame, app: &mut App) {
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(1), // Header
-            Constraint::Length(3), // Status Bar
-            Constraint::Min(5),    // Main Area
-            Constraint::Length(6), // Info Panel
-            Constraint::Length(1), // Help Bar
-        ].as_ref())
-        .split(f.size());
-
-    draw_header(f, app, chunks[0]);
-    draw_status_bar(f, app, chunks[1]);
-    draw_main_area(f, app, chunks[2]);
-    draw_info_panel(f, app, chunks[3]);
-    draw_help_bar(f, app, chunks[4]);
-}
-
-fn draw_header(f: &mut Frame, app: &App, area: Rect) {
-    let state_text = if app.paused { "PAUSED" } else { "RUNNING" };
-    let state_color = if app.paused { app.theme.paused } else { Color::Green };
-    
-    let line = Line::from(vec![
-        Span::styled(" CHRONAM ", Style::default().fg(app.theme.background).bg(app.theme.clock).add_modifier(Modifier::BOLD)),
-        Span::raw(" "),
-        Span::styled("LIVE SIMULATION", Style::default().fg(app.theme.text).add_modifier(Modifier::BOLD)),
-        Span::raw(" "),
-        Span::styled(format!("[ {} ]", state_text), Style::default().fg(state_color).add_modifier(Modifier::BOLD)),
-        Span::raw(" "),
-        Span::styled("●", Style::default().fg(state_color)),
-    ]);
-    f.render_widget(Paragraph::new(line).style(Style::default().bg(app.theme.background)), area);
-}
-
-fn draw_status_bar(f: &mut Frame, app: &App, area: Rect) {
-    // ECG style grid background
-    let grid_style = Style::default().bg(app.theme.background).fg(Color::Rgb(30, 30, 40));
-    f.render_widget(Block::default().borders(Borders::NONE).style(grid_style), area);
-
-    let items = [
-        format!("Sim Time: {:.3} us", app.timeline.current_time_ns / 1000.0),
-        format!("Cursor: {:.1} ns", app.timeline.cursor_time_ns),
-        format!("Speed: {:.1}x", app.timeline.speed),
-        format!("Zoom: {:.1}ns/ch", app.timeline.ns_per_char),
-        format!("FPS: {:.0}", app.fps),
-    ];
-
-    let mut spans = Vec::new();
-    spans.push(Span::raw(" "));
-    for item in items.iter() {
-        spans.push(Span::styled(*item, Style::default().fg(app.theme.status)));
-        spans.push(Span::raw(" │ "));
-    }
-
-    let line = Line::from(spans);
-    f.render_widget(Paragraph::new(line).style(grid_style), area);
-}
-
-fn draw_main_area(f: &mut Frame, app: &mut App, area: Rect) {
-    let main_chunks = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Length(20), Constraint::Min(10)].as_ref())
-        .split(area);
-
-    draw_signal_list(f, app, main_chunks[0]);
-    draw_waveform_area(f, app, main_chunks[1]);
-}
-
-fn draw_signal_list(f: &mut Frame, app: &mut App, area: Rect) {
-    let items: Vec<ListItem> = (0..app.source.signal_count()).map(|i| {
-        let info = app.source.signal_info(i);
-        let style = if i == app.selected_signal {
-            Style::default().fg(app.theme.selected).add_modifier(Modifier::BOLD)
-        } else {
-            Style::default().fg(app.theme.get_signal_color(i))
-        };
-        ListItem::new(Line::from(vec![Span::styled(format!(" {}", info.name), style)]))
-    }).collect();
-
-    let list = List::new(items)
-        .style(Style::default().bg(app.theme.background))
-        .highlight_style(Style::default().bg(Color::Rgb(30, 30, 40)));
-    
-    let mut state = ListState::default();
-    state.select(Some(app.selected_signal));
-    
-    f.render_stateful_widget(list, area, &mut state);
-}
-
-fn draw_waveform_area(f: &mut Frame, app: &App, area: Rect) {
-    let width = area.width as usize;
-    let right_edge = app.timeline.current_time_ns;
-    let left_edge = app.timeline.time_to_x(0.0, area.width); // just to get left_edge logic if needed
-    let left_edge_time = right_edge - (width as f64 * app.timeline.ns_per_char);
-
-    let mut lines: Vec<Line> = Vec::with_capacity(app.source.signal_count());
-
-    for i in 0..app.source.signal_count() {
-        let color = app.theme.get_signal_color(i);
-        let mut row: Vec<char> = vec![' '; width];
-        
-        let transitions = app.source.get_transitions(i, left_edge_time, right_edge);
-        
-        let mut current_state = app.source.get_state(i, left_edge_time);
-        let mut current_x = 0.0;
-
-        let draw_segment = |row: &mut [char], x_start: usize, x_end: usize, state: &SignalState, color: Color| {
-            for x in x_start..x_end.min(row.len()) {
-                match state {
-                    SignalState::High => row[x] = '█',
-                    SignalState::Low => row[x] = '─',
-                    SignalState::Unknown => row[x] = '?',
-                    SignalState::HighImpedance => row[x] = 'Z',
-                    SignalState::Bus(val) => {
-                        if x == x_start {
-                            let mut chars = val.chars().peekable();
-                            let mut idx = x;
-                            while let Some(c) = chars.next() {
-                                if idx >= x_end.min(row.len()) { break; }
-                                row[idx] = c;
-                                idx += 1;
-                            }
-                        }
-                    }
-                }
-            }
-        };
-
-        for t in transitions {
-            let x_f = app.timeline.time_to_x(t, area.width);
-            let x_int = x_f.floor() as usize;
-            
-            draw_segment(&mut row, current_x, x_int, &current_state, color);
-            
-            // Smooth transition rendering
-            let fraction = x_f - x_f.floor();
-            if x_int < width {
-                match (&current_state, app.source.get_state(i, t)) {
-                    (SignalState::Low, SignalState::High) => {
-                        if fraction < 0.5 { row[x_int] = '▌'; } else { row[x_int] = '▐'; }
-                    }
-                    (SignalState::High, SignalState::Low) => {
-                        if fraction < 0.5 { row[x_int] = '▐'; } else { row[x_int] = '▌'; }
-                    }
-                    _ => {}
-                }
-            }
-            
-            current_state = app.source.get_state(i, t);
-            current_x = x_int + 1;
-        }
-        
-        draw_segment(&mut row, current_x, width, &current_state, color);
-
-        let spans: Vec<Span> = row.iter().map(|c| {
-            Span::styled(c.to_string(), Style::default().fg(color).bg(app.theme.background))
-        }).collect();
-        
-        lines.push(Line::from(spans));
-    }
-
-    let wave_widget = Paragraph::new(lines).style(Style::default().bg(app.theme.background));
-    f.render_widget(wave_widget, area);
-}
-
-fn draw_info_panel(f: &mut Frame, app: &App, area: Rect) {
-    let info = app.source.signal_info(app.selected_signal);
-    let state = app.source.get_state(app.selected_signal, app.timeline.cursor_time_ns);
-    let trans_count = app.source.count_transitions(app.selected_signal, 0.0, app.timeline.cursor_time_ns);
-
-    let val_str = match state {
-        SignalState::High => "HIGH".into(),
-        SignalState::Low => "LOW".into(),
-        SignalState::Bus(v) => v,
-        SignalState::Unknown => "UNKNOWN".into(),
-        SignalState::HighImpedance => "HIGH-Z".into(),
-    };
-
-    let text = vec![
-        Line::from(vec![
-            Span::styled(" Selected Signal : ", Style::default().fg(app.theme.text)),
-            Span::styled(info.name.clone(), Style::default().fg(app.theme.selected).add_modifier(Modifier::BOLD))
-        ]),
-        Line::from(vec![
-            Span::styled(" Type            : ", Style::default().fg(app.theme.text)),
-            Span::styled(info.signal_type, Style::default().fg(app.theme.data))
-        ]),
-        Line::from(vec![
-            Span::styled(" Current Value   : ", Style::default().fg(app.theme.text)),
-            Span::styled(val_str, Style::default().fg(app.theme.clock))
-        ]),
-        Line::from(vec![
-            Span::styled(" Transitions     : ", Style::default().fg(app.theme.text)),
-            Span::styled(trans_count.to_string(), Style::default().fg(app.theme.status))
-        ]),
-        Line::from(vec![
-            Span::styled(" Frequency       : ", Style::default().fg(app.theme.text)),
-            Span::styled(format!("{:.2} MHz", info.frequency_mhz), Style::default().fg(app.theme.enable))
-        ]),
-    ];
-
-    let block = Block::default()
-        .borders(Borders::TOP)
-        .style(Style::default().bg(app.theme.background).fg(app.theme.text));
-    
-    f.render_widget(Paragraph::new(text).block(block), area);
-}
-
-fn draw_help_bar(f: &mut Frame, app: &App, area: Rect) {
-    let text = if app.show_help {
-        "[Space] Pause  [↑↓] Select  [+/-] Speed  [z/x] Zoom  [q] Quit"
-    } else {
-        "Press [h] for help"
-    };
-
-    let line = Line::from(vec![
-        Span::styled(format!(" {} ", text), Style::default().fg(app.theme.background).bg(app.theme.text))
-    ]);
-    f.render_widget(Paragraph::new(line).style(Style::default().bg(app.theme.background)), area);
-}
-8. Module Root (src/lib.rs)
-rust
-Copy
-pub mod app;
-pub mod wave;
-pub mod timeline;
-pub mod theme;
-pub mod ui;
-Design & Implementation Highlights
-True 60 FPS Sub-Pixel Smoothness:
-Because terminal emulators render characters on a strict grid, moving an edge by a fraction of a cell is normally impossible. draw_waveform_area in ui.rs maps exact floating-point time coordinates to integer cell grids. If an edge transition falls between two cells (e.g., x = 15.4), the renderer uses Unicode half-block characters (▌ and ▐) to visually represent the transition. This creates the perfectly fluid, anti-aliased ECG-monitor slide effect.
-
-Zero-Copy / Pre-Allocation:
-The UI rendering never clones strings in the inner loop. The row buffer for waveforms is allocated as a Vec<char> per signal, reused, and mapped directly into styled Spans. ratatui handles diffing the terminal buffer internally, but the data extraction from the WaveSource trait is $O(1)$ per visible pixel.
-
-Decoupled Architecture (WaveSource trait):
-The renderer never assumes VCD, FST, or Mock data. It only asks source.get_transitions() and source.get_state(). You can write a VCD parser in the future, implement WaveSource for it, and drop it into App::new() with zero changes to the UI code.
-
-Color Palette:
-The theme strictly uses saturated, purposeful colors (Rgb)—Cyan for clocks, Red for resets, Yellow for buses—mirroring hospital monitors. The background is near-black Rgb(10, 12, 16) to reduce eye strain but maintain high contrast.
-
-Timeline Math:
-The timeline math cleanly separates current_time_ns from the ns_per_char zoom factor. Unit tests are included in timeline.rs to guarantee that mapping time-to-X and X-to-time are perfectly reversible.
-
+8. Tests et validation
+Tests unitaires : Parser VCD/FST sur des fichiers exemples (simples) pour vérifier qu’on obtient les bons signaux/horaires.
+Tests d’intégration : Générer des VCD connus (ex. 1 bit+clock) et comparer le buffer résultant (bitmap ou ascii) avec un résultat attendu.
+Comparaison visuelle : Pour les sorties graphiques, prendre des scénarios test (vagues, fronts, analogique) et vérifier qu’aucune trace n’est manquante/décalée. On peut comparer avec un rendu GTKWave (extraction PNG et comparaison image par image).
+Performance : Script d’évaluation sur un gros dump (mesure temps d’exécution et mémoire, ex. avec /usr/bin/time -v).
+CI : Automatiser sur GitHub Actions (Linux/Mac) la construction et quelques tests, ainsi que des benchmarks légers.
+Validation utilisateur : Feedback visuel par des développeurs HDL (par ex. un FPGA dev) pour s’assurer de la convivialité du rendu et des commandes.
+9. Déploiement et packaging
+Binaire statique : Rust permet de compiler en statique (ex. cible x86_64-unknown-linux-musl) pour distribution aisée. Attention aux dépendances (crate image n’utilise que Rust pur, fstapi utilise bindgen/cc mais compile static).
+Dépendances : Idéalement aucune dépendance C obligatoire (éviter libstdc++, etc). rasteroid/sixel sont en Rust pur.
+Formats : Fournir paquet .deb/.rpm ou Homebrew ou cargo install waveview. Un script d’installation peut vérifier la présence de terminaux compatibles (ex. test Sixel via lsix).
+Mise à jour : Suivre GTKWave et VCD spec pour répertoires (surtout si Xilinx, Synopsys ajoutent de nouveaux dumps).
+Documentation : Man Page et README sur GitHub/GitLab.
