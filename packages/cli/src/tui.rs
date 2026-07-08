@@ -188,7 +188,6 @@ fn draw_signal_list(f: &mut Frame, app: &mut App, area: Rect) {
 
 fn draw_waveform_area(f: &mut Frame, app: &App, area: Rect) {
     let width = area.width as usize;
-    let right_edge = app.timeline.current_time_ns;
     let left_edge_time = app.timeline.left_edge(area.width);
 
     let sig_count = app.source.signal_count();
