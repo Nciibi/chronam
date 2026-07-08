@@ -59,25 +59,25 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 }
 
 fn draw_header(f: &mut Frame, app: &App, area: Rect) {
-    let state_text = if app.paused { "PAUSED" } else { "RUNNING" };
-    let state_color = if app.paused { app.theme.paused } else { Color::Green };
+    let state_text = if app.paused { "HOLD" } else { "MONITORING" };
+    let state_color = if app.paused { app.theme.paused } else { app.theme.trace };
 
     let line = Line::from(vec![
         Span::styled(
-            " CHRONAM ",
+            " ♥ CHRONAM ",
             Style::default()
                 .fg(app.theme.background)
-                .bg(app.theme.clock)
+                .bg(app.theme.trace)
                 .add_modifier(Modifier::BOLD),
         ),
         Span::raw(" "),
         Span::styled(
-            "LIVE SIMULATION",
+            "PATIENT MONITOR",
             Style::default()
                 .fg(app.theme.text)
                 .add_modifier(Modifier::BOLD),
         ),
-        Span::raw(" "),
+        Span::raw("  "),
         Span::styled(
             format!("[ {} ]", state_text),
             Style::default()
@@ -94,19 +94,12 @@ fn draw_header(f: &mut Frame, app: &App, area: Rect) {
 }
 
 fn draw_status_bar(f: &mut Frame, app: &App, area: Rect) {
-    let grid_style = Style::default()
-        .bg(app.theme.background)
-        .fg(Color::Rgb(30, 30, 40));
-
     let items = [
         format!("Sim: {:.3} us", app.timeline.current_time_ns / 1000.0),
-        format!("Cursor: {:.1} ns", app.timeline.cursor_time_ns),
+        format!("Lead II 25mm/s"),
+        format!("Gain 10mm/mV"),
         format!("Speed: {:.1}x", app.timeline.speed),
         format!("Zoom: {:.1} ns/ch", app.timeline.ns_per_char),
-        format!(
-            "Sigs: {}",
-            app.source.signal_count()
-        ),
     ];
 
     let mut spans: Vec<Span> = vec![Span::raw(" ")];
@@ -120,7 +113,10 @@ fn draw_status_bar(f: &mut Frame, app: &App, area: Rect) {
     ));
 
     let line = Line::from(spans);
-    f.render_widget(Paragraph::new(line).style(grid_style), area);
+    f.render_widget(
+        Paragraph::new(line).style(Style::default().bg(app.theme.background)),
+        area,
+    );
 }
 
 fn draw_main_area(f: &mut Frame, app: &mut App, area: Rect) {
