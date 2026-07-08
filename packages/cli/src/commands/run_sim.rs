@@ -59,6 +59,15 @@ pub fn run(tb_path: &str, _cli: &Cli) -> Result<()> {
     }
     sources.sort();
 
+    // Analyze the design under test *before* the testbench that instantiates
+    // it. Lexical sorting can otherwise put the testbench first (e.g.
+    // "demo_sim/..." < "test/..."), and GHDL fails analysis of a unit that
+    // references an entity not yet in the work library. We move the
+    // testbench file (the one we elaborate) to the end of the list.
+    let abs_tb = std::path::absolute(path).unwrap_or_else(|_| path.to_path_buf());
+    sources.retain(|p| p != &abs_tb);
+    sources.push(abs_tb);
+
     if sources.is_empty() {
         error_(&format!("No .vhd/.vhdl files found in {} or its parent", work_dir.display()));
         return Ok(());
