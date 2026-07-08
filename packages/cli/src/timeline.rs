@@ -27,6 +27,7 @@ impl Timeline {
         }
     }
 
+    #[allow(dead_code)]
     pub fn time_to_x(&self, time: f64, width: u16) -> f64 {
         let right_edge = self.current_time_ns;
         let left_edge = right_edge - (width as f64 * self.ns_per_char);
