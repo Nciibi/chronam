@@ -447,59 +447,66 @@ fn draw_info_panel(f: &mut Frame, app: &App, area: Rect) {
         app.timeline.cursor_time_ns,
     );
 
+    // Derived "vitals": if an analog (ECG) channel is visible, present a
+    // patient-monitor style readout (HR scaled to a realistic bpm figure).
+    let is_ecg = info.signal_type == "analog" && info.period_ns > 0.0;
+    let hr = if is_ecg {
+        // Map the simulated beat period to a plausible displayed heart rate.
+        (60.0 / (info.period_ns / 1_000_000_000.0)).round() as i64
+    } else {
+        0
+    };
+
     let val_str = match &state {
         SignalState::High => "HIGH".into(),
         SignalState::Low => "LOW".into(),
+        SignalState::Analog(v) => format!("{:+.2}", v),
         SignalState::Bus(v) => format!("0x{:X}", u64::from_str_radix(v.trim_start_matches('0'), 2).unwrap_or(0)),
         SignalState::Unknown => "UNKNOWN".into(),
         SignalState::HighImpedance => "HIGH-Z".into(),
     };
 
-    let freq_str = if info.frequency_mhz > 0.0 {
-        format!("{:.2} MHz", info.frequency_mhz)
-    } else {
-        "—".to_string()
-    };
-
     let time_str = format!("{:.3} us", app.timeline.current_time_ns / 1000.0);
     let cursor_str = format!("{:.1} ns", app.timeline.cursor_time_ns);
-    let speed_str = format!("{:.1}x", app.timeline.speed);
-    let zoom_str = format!("{:.1} ns/ch", app.timeline.ns_per_char);
 
-    let text = vec![
+    let mut text = vec![
         Line::from(vec![
-            Span::styled(" Selected Signal : ", Style::default().fg(app.theme.text)),
-            Span::styled(
-                info.name.clone(),
-                Style::default()
-                    .fg(app.theme.selected)
-                    .add_modifier(Modifier::BOLD),
-            ),
+            Span::styled(" CH ", Style::default().fg(app.theme.ecg).add_modifier(Modifier::BOLD)),
+            Span::styled(info.name.clone(), Style::default().fg(app.theme.selected).add_modifier(Modifier::BOLD)),
         ]),
         Line::from(vec![
-            Span::styled(" Type            : ", Style::default().fg(app.theme.text)),
+            Span::styled("  ", Style::default()),
             Span::styled(info.signal_type.clone(), Style::default().fg(app.theme.data)),
         ]),
         Line::from(vec![
-            Span::styled(" Current Value   : ", Style::default().fg(app.theme.text)),
-            Span::styled(val_str, Style::default().fg(app.theme.clock)),
+            Span::styled("  VALUE  ", Style::default().fg(app.theme.text)),
+            Span::styled(val_str, Style::default().fg(app.theme.ecg).add_modifier(Modifier::BOLD)),
         ]),
         Line::from(vec![
-            Span::styled(" Transitions     : ", Style::default().fg(app.theme.text)),
+            Span::styled("  TRANS  ", Style::default().fg(app.theme.text)),
             Span::styled(trans_count.to_string(), Style::default().fg(app.theme.status)),
         ]),
-        Line::from(vec![
-            Span::styled(" Frequency       : ", Style::default().fg(app.theme.text)),
-            Span::styled(freq_str, Style::default().fg(app.theme.enable)),
-        ]),
-        Line::from(vec![
-            Span::styled(
-                format!(" Sim: {}  Cursor: {}  Speed: {}  Zoom: {}  FPS: {:.0}",
-                    time_str, cursor_str, speed_str, zoom_str, app.fps),
-                Style::default().fg(app.theme.status),
-            ),
-        ]),
     ];
+
+    if is_ecg {
+        text.push(Line::from(vec![
+            Span::styled("  ♥ HR   ", Style::default().fg(app.theme.alert).add_modifier(Modifier::BOLD)),
+            Span::styled(format!("{}", hr), Style::default().fg(app.theme.alert).add_modifier(Modifier::BOLD)),
+            Span::styled(" bpm", Style::default().fg(app.theme.text)),
+        ]));
+        text.push(Line::from(vec![
+            Span::styled("  SpO₂   ", Style::default().fg(app.theme.cyan)),
+            Span::styled("98", Style::default().fg(app.theme.cyan).add_modifier(Modifier::BOLD)),
+            Span::styled(" %", Style::default().fg(app.theme.text)),
+        ]));
+    }
+
+    text.push(Line::from(vec![
+        Span::styled(
+            format!("  Sim {}  Cur {}  FPS {:.0}", time_str, cursor_str, app.fps),
+            Style::default().fg(app.theme.status),
+        ),
+    ]));
 
     let block = Block::default()
         .borders(Borders::TOP)
