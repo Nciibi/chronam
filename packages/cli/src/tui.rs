@@ -159,48 +159,10 @@ fn draw_status_bar(f: &mut Frame, app: &App, area: Rect) {
 }
 
 fn draw_main_area(f: &mut Frame, app: &mut App, area: Rect) {
-    let main_chunks = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Length(24), Constraint::Min(10)])
-        .split(area);
-
-    draw_signal_list(f, app, main_chunks[0]);
-    draw_waveform_area(f, app, main_chunks[1]);
+    draw_waveform_area(f, app, area);
 }
 
-fn draw_signal_list(f: &mut Frame, app: &mut App, area: Rect) {
-    let items: Vec<ListItem> = (0..app.source.signal_count())
-        .map(|i| {
-            let info = app.source.signal_info(i);
-            let style = if i == app.selected_signal {
-                Style::default()
-                    .fg(app.theme.selected)
-                    .add_modifier(Modifier::BOLD)
-            } else {
-                Style::default().fg(app.theme.get_signal_color(i))
-            };
-            ListItem::new(Line::from(vec![Span::styled(
-                format!(" {}", info.name),
-                style,
-            )]))
-        })
-        .collect();
-
-    let list = List::new(items)
-        .style(Style::default().bg(app.theme.background))
-        .highlight_style(Style::default().bg(Color::Rgb(30, 30, 40)));
-
-    let mut state = ListState::default();
-    state.select(Some(app.selected_signal));
-
-    let block = Block::default()
-        .borders(Borders::RIGHT)
-        .style(Style::default().bg(app.theme.background).fg(Color::Rgb(30, 30, 40)));
-
-    f.render_stateful_widget(list.block(block), area, &mut state);
-}
-
-fn draw_waveform_area(f: &mut Frame, app: &App, area: Rect) {
+fn draw_waveform_area(f: &mut Frame, app: &mut App, area: Rect) {
     let width = area.width as usize;
     let left_edge_time = app.timeline.left_edge(area.width);
 
