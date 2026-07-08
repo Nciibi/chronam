@@ -81,6 +81,7 @@ impl App {
 
     fn handle_key(&mut self, key: KeyEvent) {
         match key.code {
+            KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => self.should_quit = true,
             KeyCode::Char('q') | KeyCode::Esc => self.should_quit = true,
             KeyCode::Char(' ') => self.paused = !self.paused,
             KeyCode::Down => {
