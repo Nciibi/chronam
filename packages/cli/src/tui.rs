@@ -15,7 +15,23 @@ use crate::app::App;
 use crate::vcd::VcdData;
 use crate::wave::{SignalState, VcdSource};
 
+fn restore_terminal() {
+    let _ = disable_raw_mode();
+    let _ = io::stdout().execute(LeaveAlternateScreen);
+    let _ = io::stdout().execute(DisableMouseCapture);
+}
+
+fn setup_panic_hook() {
+    let prev = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |panic| {
+        restore_terminal();
+        prev(panic);
+    }));
+}
+
 pub fn run_interactive(data: &VcdData) -> io::Result<()> {
+    setup_panic_hook();
+
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     stdout.execute(EnterAlternateScreen)?;
@@ -32,9 +48,7 @@ pub fn run_interactive(data: &VcdData) -> io::Result<()> {
 
     let result = app.run(&mut terminal);
 
-    disable_raw_mode()?;
-    io::stdout().execute(LeaveAlternateScreen)?;
-    io::stdout().execute(DisableMouseCapture)?;
+    restore_terminal();
 
     result.map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))
 }
