@@ -36,7 +36,8 @@ pub fn run(tb_path: &str, _cli: &Cli) -> Result<()> {
 
     // Gather VHDL sources: testbench directory + its parent (for the original design files)
     let mut sources: Vec<std::path::PathBuf> = Vec::new();
-    for dir in [work_dir, work_dir.parent().unwrap_or(Path::new("."))] {
+    let parent_dir = abs_work.parent().map(|p| p.to_path_buf()).unwrap_or_else(|| std::path::PathBuf::from("."));
+    for dir in [&abs_work, &parent_dir] {
         if let Ok(entries) = fs::read_dir(dir) {
             for entry in entries.flatten() {
                 let p = entry.path();
@@ -58,10 +59,9 @@ pub fn run(tb_path: &str, _cli: &Cli) -> Result<()> {
         return Ok(());
     }
 
-    step("sim", &format!("Analyzing {} source file{} in {} ...",
+    step("sim", &format!("Analyzing {} source file{} ...",
         sources.len(),
         if sources.len() == 1 { "" } else { "s" },
-        highlight(&work_dir.display().to_string()),
     ));
 
     let vhdl_std = "93";
