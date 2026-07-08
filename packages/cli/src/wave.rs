@@ -7,6 +7,7 @@ pub enum SignalState {
     Bus(String),
     Unknown,
     HighImpedance,
+    Analog(f64),
 }
 
 #[derive(Debug, Clone)]
