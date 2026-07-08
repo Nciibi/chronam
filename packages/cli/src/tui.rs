@@ -55,6 +55,8 @@ pub fn run_interactive(data: &VcdData) -> io::Result<()> {
 
 /// Launch the built-in hospital heart-monitor demo with a synthetic source.
 pub fn run_mock(source: crate::wave::MockSource) -> io::Result<()> {
+    setup_panic_hook();
+
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     stdout.execute(EnterAlternateScreen)?;
@@ -71,9 +73,7 @@ pub fn run_mock(source: crate::wave::MockSource) -> io::Result<()> {
 
     let result = app.run(&mut terminal);
 
-    disable_raw_mode()?;
-    io::stdout().execute(LeaveAlternateScreen)?;
-    io::stdout().execute(DisableMouseCapture)?;
+    restore_terminal();
 
     result.map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))
 }
