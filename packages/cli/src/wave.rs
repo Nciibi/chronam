@@ -34,23 +34,34 @@ pub trait WaveSource: Send {
 pub struct VcdSource {
     data: VcdData,
     sig_indices: Vec<usize>,
+    // Per-signal changes, pre-sorted by time, computed once at construction.
+    // This avoids cloning + re-sorting the full change list on every cell
+    // lookup (which previously made rendering O(n² log n) per frame).
+    changes_cache: Vec<Vec<(u64, String)>>,
 }
 
 impl VcdSource {
     pub fn new(data: VcdData) -> Self {
         let sig_indices: Vec<usize> = (0..data.signals.len()).collect();
-        Self { data, sig_indices }
+        let changes_cache: Vec<Vec<(u64, String)>> = data
+            .signals
+            .iter()
+            .map(|sig| {
+                let mut changes: Vec<(u64, String)> = data
+                    .changes
+                    .iter()
+                    .filter(|c| c.id == sig.id)
+                    .map(|c| (c.time, c.value.clone()))
+                    .collect();
+                changes.sort_by_key(|(t, _)| *t);
+                changes
+            })
+            .collect();
+        Self { data, sig_indices, changes_cache }
     }
 
-    fn find_changes(&self, idx: usize) -> Vec<(u64, String)> {
-        let sig = &self.data.signals[self.sig_indices[idx]];
-        let mut changes: Vec<(u64, String)> = self.data.changes
-            .iter()
-            .filter(|c| c.id == sig.id)
-            .map(|c| (c.time, c.value.clone()))
-            .collect();
-        changes.sort_by_key(|(t, _)| *t);
-        changes
+    fn find_changes(&self, idx: usize) -> &[(u64, String)] {
+        &self.changes_cache[self.sig_indices[idx]]
     }
 
     fn get_value_at(&self, changes: &[(u64, String)], time_fs: u64) -> Option<String> {
