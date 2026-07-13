@@ -17,7 +17,7 @@
 **Chronam** is a high-performance, cross-platform VHDL development environment. It pairs a
 **VS Code extension** for interactive editing and waveform viewing with a **standalone Rust CLI**
 for build automation, simulation, and CI/CD — all powered by [GHDL](https://ghdl.github.io/ghdl/).
-   
+       
 Write VHDL, run a simulation, and inspect the resulting waveforms natively in your terminal or editor —
 no external viewers, no block-art hacks, no synthetic data. 
 
